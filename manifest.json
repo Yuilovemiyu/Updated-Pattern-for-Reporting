@@ -1,0 +1,9 @@
+{
+  "name": "HC/PG SA Report",
+  "short_name": "Report",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#005bac",
+  "icons": []
+}
