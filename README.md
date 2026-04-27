@@ -1,28 +1,74 @@
 # 📊 HC/PG SA Monthly Report System
 
-A real-time Firebase web app for tracking daily store reports with monthly summaries.
+A web-based reporting system for store performance tracking using Firebase Firestore + PWA support.
 
 ---
 
 ## 🚀 Features
 
-- 📅 Real-time auto date (always today)
-- ☁️ Firebase Firestore live sync
-- ➕ Daily store reporting
-- 🔘 Smart Non Apps system
-  - Only active when Total Apps = 0 or 1
-  - Values: Yes / No only
-- 📊 Monthly totals per store
-- ↩️ Undo delete function
-- 📱 Installable as PWA (mobile app style)
+### 📍 Data Entry System
+- Daily store report input
+- Auto status detection (Working / Rest Day / Override)
+- Tracks:
+  - Total Apps
+  - Signed
+  - Rejected
+  - Cancelled
+  - Non Apps (conditional enable)
 
 ---
 
-## 🧠 Non Apps Rule
+### 📦 NEW: Batch Save System (Queue Mode)
 
-- Enabled ONLY if Total Apps = 0 or 1
-- Disabled otherwise
-- Stored in Firebase per entry
+Instead of saving one-by-one, users can now:
+
+- ➕ Add multiple entries to a queue
+- 📋 Preview all pending entries
+- 💾 Save everything at once using **Save All**
+- 🔄 Prevents accidental duplicate writes
+- ⚡ Faster bulk encoding for monthly reporting
+
+---
+
+### 📊 Reporting Features
+- Live Firestore sync
+- Auto-updating report table
+- Monthly totals per store
+- Automatic aggregation per month
+
+---
+
+### ↩️ Undo System
+- Restore deleted entries instantly
+
+---
+
+## 🔥 Tech Stack
+- HTML + JavaScript
+- Firebase Firestore
+- Service Worker (PWA support)
+
+---
+
+## 📱 PWA Support
+This app supports offline caching using a service worker:
+- Loads instantly after first visit
+- Works with cached UI
+- Auto-updates when new version is deployed
+
+---
+
+## 🛠 Deployment Notes
+
+If updates don’t reflect:
+- Hard refresh browser (Ctrl + Shift + R)
+- Clear cache / unregister service worker
+- Ensure `sw.js` cache version is updated
+
+---
+
+## 📌 Version
+v2 - Batch Save System Added
 
 ---
 
