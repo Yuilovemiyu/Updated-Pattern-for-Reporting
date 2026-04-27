@@ -48,21 +48,35 @@
 <input type="number" id="rejected" placeholder="Rejected">
 <input type="number" id="cancelled" placeholder="Cancelled">
 
+<!-- 🔥 NON APPS -->
+<select id="nonapps" disabled>
+  <option value="">Non Apps</option>
+  <option value="Yes">Yes</option>
+  <option value="No">No</option>
+</select>
+
 <button onclick="addEntry()">➕ Add Entry</button>
 <button onclick="undoLast()">↩️ Undo</button>
 
 <table id="report">
   <tr>
-    <th>Date</th><th>Store</th><th>Status</th>
-    <th>Total</th><th>Signed</th>
-    <th>Rejected</th><th>Cancelled</th><th>Action</th>
+    <th>Date</th>
+    <th>Store</th>
+    <th>Status</th>
+    <th>Total</th>
+    <th>Signed</th>
+    <th>Rejected</th>
+    <th>Cancelled</th>
+    <th>Non Apps</th>
+    <th>Action</th>
   </tr>
 </table>
 
-<h3>📅 Monthly Totals</h3>
+<h3>📅 Monthly Totals (Per Store)</h3>
 <table id="monthlyTotals">
   <tr>
     <th>Month</th>
+    <th>Store</th>
     <th>Total Apps</th>
     <th>Signed</th>
     <th>Rejected</th>
@@ -85,6 +99,8 @@ const db = firebase.firestore();
 const storeSelect = document.getElementById("store");
 const report = document.getElementById("report");
 const override = document.getElementById("override");
+const totalInput = document.getElementById("total");
+const nonapps = document.getElementById("nonapps");
 
 // UNDO STACK
 let historyStack = [];
@@ -111,17 +127,43 @@ const stores = [
   {name:"Anabu (Ian)", rest:"Monday"}
 ];
 
-// LOAD STORES INTO DROPDOWN
+// LOAD STORES
 stores.forEach(s=>{
-  let opt=document.createElement("option");
-  opt.value=s.name;
-  opt.text=s.name;
+  let opt = document.createElement("option");
+  opt.value = s.name;
+  opt.text = s.name;
   storeSelect.add(opt);
 });
 
-// DAY NAME
+// DAY
 function getDayName(d){
   return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(d).getDay()];
+}
+
+// 🔥 NON APPS ENABLE RULE
+totalInput.addEventListener("input", ()=>{
+  const val = Number(totalInput.value);
+
+  if(val === 0 || val === 1){
+    nonapps.disabled = false;
+  } else {
+    nonapps.disabled = true;
+    nonapps.value = "";
+  }
+});
+
+// RESET FORM
+function resetForm(){
+  document.getElementById("date").value = "";
+  storeSelect.selectedIndex = 0;
+  override.value = "";
+  totalInput.value = "";
+  document.getElementById("signed").value = "";
+  document.getElementById("rejected").value = "";
+  document.getElementById("cancelled").value = "";
+
+  nonapps.value = "";
+  nonapps.disabled = true;
 }
 
 // ADD ENTRY
@@ -141,25 +183,30 @@ function addEntry(){
     date,
     store,
     status,
-    total: Number(document.getElementById("total").value || 0),
+    total: Number(totalInput.value || 0),
     signed: Number(document.getElementById("signed").value || 0),
     rejected: Number(document.getElementById("rejected").value || 0),
     cancelled: Number(document.getElementById("cancelled").value || 0),
+
+    // 🔥 NON APPS
+    nonapps: nonapps.value || "-",
+
     timestamp: Date.now()
   };
 
-  // PREVENT DUPLICATE (same date + store)
   db.collection("reports")
     .where("date","==",date)
     .where("store","==",store)
     .get()
     .then(snapshot=>{
       if(!snapshot.empty){
-        alert("Entry already exists for this store and date");
+        alert("Entry already exists");
         return;
       }
 
-      db.collection("reports").add(data);
+      db.collection("reports").add(data).then(()=>{
+        resetForm(); // 🔥 refresh dropdowns after submit
+      });
     });
 }
 
@@ -167,9 +214,15 @@ function addEntry(){
 db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
   report.innerHTML = `
     <tr>
-      <th>Date</th><th>Store</th><th>Status</th>
-      <th>Total</th><th>Signed</th>
-      <th>Rejected</th><th>Cancelled</th><th>Action</th>
+      <th>Date</th>
+      <th>Store</th>
+      <th>Status</th>
+      <th>Total</th>
+      <th>Signed</th>
+      <th>Rejected</th>
+      <th>Cancelled</th>
+      <th>Non Apps</th>
+      <th>Action</th>
     </tr>
   `;
 
@@ -187,6 +240,7 @@ db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
     row.insertCell().innerText = d.signed;
     row.insertCell().innerText = d.rejected;
     row.insertCell().innerText = d.cancelled;
+    row.insertCell().innerText = d.nonapps;
 
     let action = row.insertCell();
     let btn = document.createElement("button");
@@ -200,7 +254,6 @@ db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
 
     action.appendChild(btn);
 
-    // COLOR
     if(d.status === "Rest Day") row.classList.add("rest");
     else if(d.status === "Absent") row.classList.add("absent");
     else row.classList.add("working");
@@ -217,21 +270,29 @@ function undoLast(){
   db.collection("reports").doc(last.id).set(last.data);
 }
 
-// MONTHLY TOTALS
+// MONTHLY TOTALS (PER STORE)
 function updateMonthlyTotals(data){
   let totals = {};
 
   data.forEach(d=>{
     let month = d.date.substring(0,7);
+    let key = month + "_" + d.store;
 
-    if(!totals[month]){
-      totals[month] = {total:0,signed:0,rejected:0,cancelled:0};
+    if(!totals[key]){
+      totals[key] = {
+        month,
+        store: d.store,
+        total:0,
+        signed:0,
+        rejected:0,
+        cancelled:0
+      };
     }
 
-    totals[month].total += d.total;
-    totals[month].signed += d.signed;
-    totals[month].rejected += d.rejected;
-    totals[month].cancelled += d.cancelled;
+    totals[key].total += d.total;
+    totals[key].signed += d.signed;
+    totals[key].rejected += d.rejected;
+    totals[key].cancelled += d.cancelled;
   });
 
   let table = document.getElementById("monthlyTotals");
@@ -239,6 +300,7 @@ function updateMonthlyTotals(data){
   table.innerHTML = `
     <tr>
       <th>Month</th>
+      <th>Store</th>
       <th>Total Apps</th>
       <th>Signed</th>
       <th>Rejected</th>
@@ -246,17 +308,17 @@ function updateMonthlyTotals(data){
     </tr>
   `;
 
-  for(let m in totals){
+  Object.values(totals).forEach(t=>{
     let row = table.insertRow();
-    row.insertCell().innerText = m;
-    row.insertCell().innerText = totals[m].total;
-    row.insertCell().innerText = totals[m].signed;
-    row.insertCell().innerText = totals[m].rejected;
-    row.insertCell().innerText = totals[m].cancelled;
-  }
+    row.insertCell().innerText = t.month;
+    row.insertCell().innerText = t.store;
+    row.insertCell().innerText = t.total;
+    row.insertCell().innerText = t.signed;
+    row.insertCell().innerText = t.rejected;
+    row.insertCell().innerText = t.cancelled;
+  });
 }
 </script>
 
 </body>
 </html>
-
