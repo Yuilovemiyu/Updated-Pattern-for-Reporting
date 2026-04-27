@@ -14,10 +14,6 @@
     table { border-collapse: collapse; margin-top: 20px; width: 100%; }
     th, td { border: 1px solid black; padding: 6px; text-align: center; font-size: 12px; }
 
-    .rest { background:#fff3cd; }
-    .working { background:#d4edda; }
-    .absent { background:#f8d7da; }
-
     .delete-btn {
       background: #dc3545;
       color: white;
@@ -59,34 +55,21 @@
 <button onclick="clearForm()">🧹 Clear</button>
 <button onclick="undoLast()">↩️ Undo</button>
 
-<table id="report">
-  <tr>
-    <th>Date</th><th>Store</th><th>Status</th>
-    <th>Total</th><th>Signed</th>
-    <th>Rejected</th><th>Cancelled</th><th>Non Apps</th><th>Action</th>
-  </tr>
-</table>
+<h3>📦 Today's Entries (Preview)</h3>
+<table id="previewTable"></table>
+
+<table id="report"></table>
 
 <h3>📅 Monthly Totals (Per Store)</h3>
-<table id="monthlyTotals">
-  <tr>
-    <th>Month</th>
-    <th>Store</th>
-    <th>Total Apps</th>
-    <th>Signed</th>
-    <th>Rejected</th>
-    <th>Cancelled</th>
-  </tr>
-</table>
+<table id="monthlyTotals"></table>
 
 <script>
-// 🔥 FIREBASE
+// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyBoPZ6nioxI_fzVrdLSh-pQ_EEqSdPOnrY",
   authDomain: "pattern-for-reporting.firebaseapp.com",
   projectId: "pattern-for-reporting"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -100,26 +83,7 @@ const dateInput = document.getElementById("date");
 let historyStack = [];
 let todayEntries = [];
 
-// 🔄 LOCAL STORAGE LOAD
-function loadLocal(){
-  const data = localStorage.getItem("todayEntries");
-  if(data){
-    todayEntries = JSON.parse(data);
-  }
-}
-loadLocal();
-
-// 💾 SAVE LOCAL
-function saveLocal(){
-  localStorage.setItem("todayEntries", JSON.stringify(todayEntries));
-}
-
-// 🚪 SAVE ON EXIT
-window.addEventListener("beforeunload", () => {
-  saveLocal();
-});
-
-// STORE LIST
+// STORES
 const stores = [
   {name:"Brookside", rest:"Monday"},
   {name:"Manggahan", rest:"Monday"},
@@ -148,10 +112,10 @@ stores.forEach(s=>{
   storeSelect.add(opt);
 });
 
+// DATE
 function getDayName(d){
   return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(d).getDay()];
 }
-
 function setToday(){
   dateInput.value = new Date().toISOString().split("T")[0];
 }
@@ -164,7 +128,52 @@ totalInput.addEventListener("input", ()=>{
   if(nonapps.disabled) nonapps.value = "";
 });
 
-// CLEAR FORM
+// LOCAL STORAGE
+function saveLocal(){
+  localStorage.setItem("todayEntries", JSON.stringify(todayEntries));
+}
+function loadLocal(){
+  const data = localStorage.getItem("todayEntries");
+  if(data) todayEntries = JSON.parse(data);
+}
+window.addEventListener("beforeunload", saveLocal);
+
+// PREVIEW
+function renderPreview(){
+  const table = document.getElementById("previewTable");
+
+  table.innerHTML = `
+    <tr>
+      <th>Date</th><th>Store</th><th>Total</th>
+      <th>Signed</th><th>Rejected</th>
+      <th>Cancelled</th><th>Non Apps</th><th>Action</th>
+    </tr>
+  `;
+
+  todayEntries.forEach((e,i)=>{
+    let row=table.insertRow();
+    row.insertCell().innerText=e.date;
+    row.insertCell().innerText=e.store;
+    row.insertCell().innerText=e.total;
+    row.insertCell().innerText=e.signed;
+    row.insertCell().innerText=e.rejected;
+    row.insertCell().innerText=e.cancelled;
+    row.insertCell().innerText=e.nonapps;
+
+    let btn=document.createElement("button");
+    btn.innerText="Remove";
+    btn.className="delete-btn";
+    btn.onclick=()=>{
+      todayEntries.splice(i,1);
+      saveLocal();
+      renderPreview();
+    };
+
+    row.insertCell().appendChild(btn);
+  });
+}
+
+// CLEAR
 function clearForm(){
   setToday();
   storeSelect.selectedIndex = 0;
@@ -177,95 +186,76 @@ function clearForm(){
   nonapps.disabled = true;
 }
 
-// ➕ ADD ENTRY (LOCAL ONLY)
+// ADD ENTRY
 function addEntry(){
-  const date = dateInput.value;
-  const store = storeSelect.value;
+  const date=dateInput.value;
+  const store=storeSelect.value;
 
-  if(!date || !store) return alert("Select date and store");
+  if(!date||!store) return alert("Select date and store");
 
-  const exists = todayEntries.find(e => e.date === date && e.store === store);
-  if(exists){
-    alert("Already added for today");
-    return;
+  if(todayEntries.find(e=>e.date===date&&e.store===store)){
+    return alert("Already added");
   }
 
-  const selectedStore = stores.find(s=>s.name===store);
+  const s=stores.find(x=>x.name===store);
+  let status=override.value || (getDayName(date)===s.rest?"Rest Day":"Working");
 
-  let status = override.value || (
-    getDayName(date) === selectedStore.rest ? "Rest Day" : "Working"
-  );
-
-  const data = {
-    date,
-    store,
-    status,
-    total: Number(totalInput.value || 0),
-    signed: Number(document.getElementById("signed").value || 0),
-    rejected: Number(document.getElementById("rejected").value || 0),
-    cancelled: Number(document.getElementById("cancelled").value || 0),
-    nonapps: nonapps.value || "-"
+  let data={
+    date,store,status,
+    total:+totalInput.value||0,
+    signed:+signed.value||0,
+    rejected:+rejected.value||0,
+    cancelled:+cancelled.value||0,
+    nonapps:nonapps.value||"-"
   };
 
   todayEntries.push(data);
   saveLocal();
-
-  alert("Added to today's entries");
-
+  renderPreview();
   clearForm();
 }
 
-// 💾 SAVE ALL
+// SAVE ALL
 function saveAllToday(){
-  if(todayEntries.length === 0){
-    return alert("No entries to save");
-  }
+  if(todayEntries.length===0) return alert("No entries");
 
-  let batch = db.batch();
-  let collection = db.collection("reports");
+  let batch=db.batch();
+  let col=db.collection("reports");
 
-  Promise.all(
-    todayEntries.map(entry =>
-      collection
-        .where("date","==",entry.date)
-        .where("store","==",entry.store)
-        .get()
-    )
-  ).then(results => {
+  Promise.all(todayEntries.map(e=>
+    col.where("date","==",e.date).where("store","==",e.store).get()
+  )).then(res=>{
 
-    let hasDuplicate = false;
-
-    results.forEach((snapshot, index) => {
-      if(!snapshot.empty){
-        hasDuplicate = true;
-        alert(`Duplicate found: ${todayEntries[index].store}`);
+    let dup=false;
+    res.forEach((snap,i)=>{
+      if(!snap.empty){
+        alert("Duplicate: "+todayEntries[i].store);
+        dup=true;
       }
     });
 
-    if(hasDuplicate) return;
+    if(dup) return;
 
-    todayEntries.forEach(entry => {
-      let ref = collection.doc();
-      batch.set(ref, {
-        ...entry,
-        timestamp: Date.now()
-      });
+    todayEntries.forEach(e=>{
+      let ref=col.doc();
+      batch.set(ref,{...e,timestamp:Date.now()});
     });
 
     batch.commit().then(()=>{
-      alert("All entries saved!");
-      todayEntries = [];
+      alert("Saved!");
+      todayEntries=[];
       localStorage.removeItem("todayEntries");
+      renderPreview();
+      clearForm();
     });
-
   });
 }
 
-// REALTIME LOAD
+// LOAD REPORT
 db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
-  const report = document.getElementById("report");
+  const report=document.getElementById("report");
 
-  report.innerHTML = `
+  report.innerHTML=`
     <tr>
       <th>Date</th><th>Store</th><th>Status</th>
       <th>Total</th><th>Signed</th>
@@ -273,34 +263,31 @@ db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
     </tr>
   `;
 
-  let allData = [];
+  let allData=[];
 
   snapshot.forEach(doc=>{
-    let d = doc.data();
+    let d=doc.data();
     allData.push(d);
 
-    let row = report.insertRow();
-    row.insertCell().innerText = d.date;
-    row.insertCell().innerText = d.store;
-    row.insertCell().innerText = d.status;
-    row.insertCell().innerText = d.total;
-    row.insertCell().innerText = d.signed;
-    row.insertCell().innerText = d.rejected;
-    row.insertCell().innerText = d.cancelled;
-    row.insertCell().innerText = d.nonapps;
+    let row=report.insertRow();
+    row.insertCell().innerText=d.date;
+    row.insertCell().innerText=d.store;
+    row.insertCell().innerText=d.status;
+    row.insertCell().innerText=d.total;
+    row.insertCell().innerText=d.signed;
+    row.insertCell().innerText=d.rejected;
+    row.insertCell().innerText=d.cancelled;
+    row.insertCell().innerText=d.nonapps;
 
-    let action = row.insertCell();
-
-    let delBtn = document.createElement("button");
-    delBtn.innerText = "Delete";
-    delBtn.className = "delete-btn";
-
-    delBtn.onclick = ()=>{
-      historyStack.push({id: doc.id, data: d});
+    let btn=document.createElement("button");
+    btn.innerText="Delete";
+    btn.className="delete-btn";
+    btn.onclick=()=>{
+      historyStack.push({id:doc.id,data:d});
       db.collection("reports").doc(doc.id).delete();
     };
 
-    action.appendChild(delBtn);
+    row.insertCell().appendChild(btn);
   });
 
   updateMonthlyTotals(allData);
@@ -308,56 +295,56 @@ db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
 
 // UNDO
 function undoLast(){
-  if(historyStack.length === 0) return alert("Nothing to undo");
-
-  let last = historyStack.pop();
+  if(!historyStack.length) return alert("Nothing to undo");
+  let last=historyStack.pop();
   db.collection("reports").doc(last.id).set(last.data);
 }
 
-// MONTHLY TOTALS
+// 📊 MONTHLY TOTALS (UPDATED LOGIC)
 function updateMonthlyTotals(data){
-  let totals = {};
+  let totals={};
 
   data.forEach(d=>{
-    let key = d.date.substring(0,7) + "_" + d.store;
+    if(d.status==="Rest Day"||d.status==="Absent") return;
+
+    let month=d.date.substring(0,7);
+    let key=month+"_"+d.store;
 
     if(!totals[key]){
-      totals[key] = {
-        month: d.date.substring(0,7),
-        store: d.store,
-        total:0,
-        signed:0,
-        rejected:0,
-        cancelled:0
-      };
+      totals[key]={month,store:d.store,total:0,signed:0,rejected:0,cancelled:0};
     }
 
-    totals[key].total += d.total;
-    totals[key].signed += d.signed;
-    totals[key].rejected += d.rejected;
-    totals[key].cancelled += d.cancelled;
+    totals[key].total+=+d.total||0;
+    totals[key].signed+=+d.signed||0;
+    totals[key].rejected+=+d.rejected||0;
+    totals[key].cancelled+=+d.cancelled||0;
   });
 
-  let table = document.getElementById("monthlyTotals");
+  let table=document.getElementById("monthlyTotals");
 
-  table.innerHTML = `
+  table.innerHTML=`
     <tr>
       <th>Month</th><th>Store</th>
-      <th>Total Apps</th><th>Signed</th>
-      <th>Rejected</th><th>Cancelled</th>
+      <th>Total</th><th>Signed</th><th>Rejected</th><th>Cancelled</th>
     </tr>
   `;
 
-  Object.values(totals).forEach(t=>{
-    let row = table.insertRow();
-    row.insertCell().innerText = t.month;
-    row.insertCell().innerText = t.store;
-    row.insertCell().innerText = t.total;
-    row.insertCell().innerText = t.signed;
-    row.insertCell().innerText = t.rejected;
-    row.insertCell().innerText = t.cancelled;
-  });
+  Object.values(totals)
+    .sort((a,b)=>a.month.localeCompare(b.month)||a.store.localeCompare(b.store))
+    .forEach(t=>{
+      let row=table.insertRow();
+      row.insertCell().innerText=t.month;
+      row.insertCell().innerText=t.store;
+      row.insertCell().innerText=t.total;
+      row.insertCell().innerText=t.signed;
+      row.insertCell().innerText=t.rejected;
+      row.insertCell().innerText=t.cancelled;
+    });
 }
+
+// INIT
+loadLocal();
+renderPreview();
 </script>
 
 </body>
