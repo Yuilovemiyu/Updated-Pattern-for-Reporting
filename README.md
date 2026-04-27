@@ -1,26 +1,28 @@
 # 📊 HC/PG SA Monthly Report System
 
-A real-time Firebase web app for tracking store daily reports, including monthly summaries.
+A real-time Firebase web app for tracking daily store reports with monthly summaries.
 
 ---
 
 ## 🚀 Features
 
-- 📅 Daily store reporting
-- ☁️ Firebase Firestore real-time sync
-- 🔁 Undo delete function
+- 📅 Real-time auto date (always today)
+- ☁️ Firebase Firestore live sync
+- ➕ Daily store reporting
+- 🔘 Smart Non Apps system
+  - Only active when Total Apps = 0 or 1
+  - Values: Yes / No only
 - 📊 Monthly totals per store
-- 🔘 Non Apps validation system
-- 📱 PWA installable (works like an app)
-- 💾 Offline caching (basic via Service Worker)
+- ↩️ Undo delete function
+- 📱 Installable as PWA (mobile app style)
 
 ---
 
 ## 🧠 Non Apps Rule
 
-- Enabled only when Total Apps = 0 or 1
-- Values allowed: Yes / No only
-- Auto-disabled otherwise
+- Enabled ONLY if Total Apps = 0 or 1
+- Disabled otherwise
+- Stored in Firebase per entry
 
 ---
 
@@ -33,11 +35,46 @@ Monthly table shows:
 - Rejected
 - Cancelled
 
+Grouped by:
+Month + Store
 ---
 
-## 🔥 Setup Instructions
+## 🔥 Setup
 
-### 1. Firebase Setup
-- Create Firebase project
-- Enable Firestore Database
-- Set rules (for testing only):
+1. Create Firebase project
+2. Enable Firestore Database
+3. Use test rules (for development only):
+
+allow read, write: if true;
+---
+
+## 📁 Files
+
+- index.html
+- sw.js
+- manifest.json
+
+---
+
+## 📲 Install App
+
+- Open in Chrome
+- Click "Install App"
+- Works like mobile app
+
+---
+
+## ⚠️ Notes
+
+- Requires internet (Firebase backend)
+- Service Worker caches UI only
+- Works best on Chrome / Edge
+
+---
+
+## 🛠 Future upgrades
+
+- Login per user
+- Store ranking dashboard
+- Charts & analytics
+- Export to Excel / PDF
