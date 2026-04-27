@@ -25,14 +25,6 @@
       padding: 4px 6px;
       cursor: pointer;
     }
-
-    .save-btn {
-      background: #28a745;
-      color: white;
-      border: none;
-      padding: 8px;
-      cursor: pointer;
-    }
   </style>
 </head>
 
@@ -62,16 +54,9 @@
   <option value="No">No</option>
 </select>
 
-<button onclick="addToQueue()">➕ Add to Queue</button>
-<button class="save-btn" onclick="saveAll()">💾 Save All</button>
+<button onclick="addEntry()">💾 Save Entry</button>
+<button onclick="clearForm()">🧹 Clear</button>
 <button onclick="undoLast()">↩️ Undo</button>
-
-<h3>📦 Pending Entries</h3>
-<table id="queueTable">
-  <tr>
-    <th>Date</th><th>Store</th><th>Total</th><th>Signed</th><th>Rejected</th><th>Cancelled</th><th>Non Apps</th>
-  </tr>
-</table>
 
 <table id="report">
   <tr>
@@ -94,6 +79,7 @@
 </table>
 
 <script>
+// 🔥 FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyBoPZ6nioxI_fzVrdLSh-pQ_EEqSdPOnrY",
   authDomain: "pattern-for-reporting.firebaseapp.com",
@@ -103,6 +89,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// DOM
 const storeSelect = document.getElementById("store");
 const override = document.getElementById("override");
 const totalInput = document.getElementById("total");
@@ -110,9 +97,8 @@ const nonapps = document.getElementById("nonapps");
 const dateInput = document.getElementById("date");
 
 let historyStack = [];
-let queue = [];
 
-// stores
+// STORE LIST
 const stores = [
   {name:"Brookside", rest:"Monday"},
   {name:"Manggahan", rest:"Monday"},
@@ -150,13 +136,15 @@ function setToday(){
 }
 setToday();
 
+// NON APPS RULE
 totalInput.addEventListener("input", ()=>{
   const val = Number(totalInput.value);
   nonapps.disabled = !(val === 0 || val === 1);
   if(nonapps.disabled) nonapps.value = "";
 });
 
-function resetForm(){
+// CLEAR FORM
+function clearForm(){
   setToday();
   storeSelect.selectedIndex = 0;
   override.value = "";
@@ -168,8 +156,8 @@ function resetForm(){
   nonapps.disabled = true;
 }
 
-// ➕ ADD TO QUEUE
-function addToQueue(){
+// SAVE ENTRY (ONLY NEW)
+function addEntry(){
   const date = dateInput.value;
   const store = storeSelect.value;
 
@@ -189,57 +177,24 @@ function addToQueue(){
     signed: Number(document.getElementById("signed").value || 0),
     rejected: Number(document.getElementById("rejected").value || 0),
     cancelled: Number(document.getElementById("cancelled").value || 0),
-    nonapps: nonapps.value || "-"
+    nonapps: nonapps.value || "-",
+    timestamp: Date.now()
   };
 
-  queue.push(data);
-  renderQueue();
-  resetForm();
-}
+  db.collection("reports")
+    .where("date","==",date)
+    .where("store","==",store)
+    .get()
+    .then(snapshot=>{
+      if(!snapshot.empty){
+        alert("Entry already exists");
+        return;
+      }
 
-// SHOW QUEUE
-function renderQueue(){
-  const table = document.getElementById("queueTable");
-  table.innerHTML = `
-    <tr>
-      <th>Date</th><th>Store</th><th>Total</th>
-      <th>Signed</th><th>Rejected</th>
-      <th>Cancelled</th><th>Non Apps</th>
-    </tr>
-  `;
-
-  queue.forEach(q=>{
-    let row = table.insertRow();
-    row.insertCell().innerText = q.date;
-    row.insertCell().innerText = q.store;
-    row.insertCell().innerText = q.total;
-    row.insertCell().innerText = q.signed;
-    row.insertCell().innerText = q.rejected;
-    row.insertCell().innerText = q.cancelled;
-    row.insertCell().innerText = q.nonapps;
-  });
-}
-
-// 💾 SAVE ALL
-function saveAll(){
-  if(queue.length === 0) return alert("No entries to save");
-
-  let batch = db.batch();
-  let col = db.collection("reports");
-
-  queue.forEach(data=>{
-    let ref = col.doc();
-    batch.set(ref, {
-      ...data,
-      timestamp: Date.now()
+      db.collection("reports").add(data).then(()=>{
+        clearForm();
+      });
     });
-  });
-
-  batch.commit().then(()=>{
-    queue = [];
-    renderQueue();
-    alert("All entries saved!");
-  });
 }
 
 // REALTIME LOAD
@@ -271,16 +226,18 @@ db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
     row.insertCell().innerText = d.nonapps;
 
     let action = row.insertCell();
-    let btn = document.createElement("button");
-    btn.innerText = "Delete";
-    btn.className = "delete-btn";
 
-    btn.onclick = ()=>{
+    // 🗑️ DELETE ONLY
+    let delBtn = document.createElement("button");
+    delBtn.innerText = "Delete";
+    delBtn.className = "delete-btn";
+
+    delBtn.onclick = ()=>{
       historyStack.push({id: doc.id, data: d});
       db.collection("reports").doc(doc.id).delete();
     };
 
-    action.appendChild(btn);
+    action.appendChild(delBtn);
   });
 
   updateMonthlyTotals(allData);
