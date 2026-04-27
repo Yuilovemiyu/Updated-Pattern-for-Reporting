@@ -1,42 +1,62 @@
 # 📊 HC/PG SA Monthly Report System
 
-A lightweight Firebase-based reporting system for store performance tracking.
+A lightweight Firebase-based reporting web app with batch save and auto-recovery.
 
 ---
 
 ## 🚀 Features
 
-### 📍 Daily Reporting
-- Store-based data entry
-- Auto status detection:
+### 📍 Daily Data Entry
+- Input store performance data
+- Auto-detect:
   - Working
   - Rest Day
-  - Manual override
-- Tracks:
-  - Total Applications
-  - Signed
-  - Rejected
-  - Cancelled
-  - Non Apps (auto-enabled for low totals)
+  - Manual override available
+
+Tracks:
+- Total Apps
+- Signed
+- Rejected
+- Cancelled
+- Non Apps (auto-enabled for 0–1 total)
 
 ---
 
-### 💾 Simple Save System
-- Direct save to Firebase Firestore
-- Prevents duplicate entries per store per date
-- No queue or batch system (simplified workflow)
+## 💾 Smart Save System
+
+### ➕ Add Entry
+- Stores entry locally (not yet saved to Firebase)
+- Prevents duplicate store per day
+
+### 💾 Save All (Today)
+- Saves all entries in one batch to Firebase
+- Fast and efficient
+- Prevents duplicate records in database
 
 ---
 
-### 🗑️ Data Management
-- Delete entries instantly
-- Undo last deletion supported
+## 🔄 Auto-Save Protection
+
+- Entries are automatically saved in **localStorage**
+- Works when:
+  - Page is refreshed
+  - Browser is closed
+  - Internet disconnects
+
+### 🔁 Auto Restore
+- Unsaved entries are restored when the user returns
 
 ---
 
-### 📊 Monthly Summary
-- Automatic aggregation per store
-- Monthly totals include:
+## 🗑️ Data Controls
+- Delete saved entries
+- Undo last deletion
+
+---
+
+## 📊 Monthly Reporting
+- Auto-calculated totals per store
+- Aggregates:
   - Total Apps
   - Signed
   - Rejected
@@ -44,31 +64,38 @@ A lightweight Firebase-based reporting system for store performance tracking.
 
 ---
 
-## 🔥 Tech Stack
-- HTML + JavaScript
-- Firebase Firestore
-- Service Worker (PWA caching)
-
----
-
 ## 📱 PWA Support
-- Offline-friendly caching (basic)
-- Fast load after first visit
-- Auto updates when service worker version changes
+- Installable web app
+- Fast loading via service worker
+- Basic offline support (UI cached)
 
 ---
 
-## ⚠️ Deployment Notes
+## 🛠 Tech Stack
+- HTML / CSS / JavaScript
+- Firebase Firestore
+- Service Worker
+- LocalStorage (offline-safe queue)
 
-If changes don’t appear:
-- Hard refresh browser (Ctrl + Shift + R)
-- Clear cache / unregister service worker
-- Ensure `sw.js` cache version is updated (v3)
+---
+
+## ⚠️ Deployment Tips
+
+If updates don’t reflect:
+1. Hard refresh (Ctrl + Shift + R)
+2. Clear browser cache
+3. Unregister service worker (DevTools → Application tab)
+4. Ensure `CACHE_NAME` is updated in `sw.js`
 
 ---
 
 ## 📌 Version
-v3 - Simplified System (No Edit, No Queue, Delete Only)
+
+**v4 - Batch Save + Auto-Recovery System**
+- Save All (Today)
+- Local auto-save
+- No edit mode
+- Simplified workflow
 
 ---
 
