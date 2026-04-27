@@ -26,7 +26,7 @@
 
 <body>
 
-<h2>📊 Monthly Store Report (APPEND ONLY FIXED)</h2>
+<h2>📊 HC/PG SA Monthly Report (FINAL FIXED SYSTEM)</h2>
 
 <input type="date" id="date">
 
@@ -52,8 +52,7 @@
 
 <button onclick="addEntry()">➕ Add Entry</button>
 <button onclick="saveAllToday()">💾 Save All (Today)</button>
-<button onclick="clearForm()">🧹 Clear</button>
-<button onclick="undoLast()">↩️ Undo</button>
+<button onclick="loadPreviousData()">📂 View Previous Data</button>
 
 <h3>📦 Today's Entries</h3>
 <table id="previewTable"></table>
@@ -61,12 +60,12 @@
 <h3>📋 Full Report</h3>
 <table id="report"></table>
 
-<h3>📅 Monthly Totals (PERMANENT ACCUMULATION)</h3>
+<h3>📅 Monthly Totals (AUTO RECALCULATED)</h3>
 <table id="monthlyTotals"></table>
 
 <script>
 
-// FIREBASE
+// ================= FIREBASE =================
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_AUTH_DOMAIN",
@@ -76,80 +75,88 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// DOM
+// ================= STORE LIST =================
+const stores = [
+  {name:"Brookside", rest:"Monday"},
+  {name:"Manggahan", rest:"Monday"},
+  {name:"Bacoor", rest:"Tuesday"},
+  {name:"Dasmarinas", rest:"Tuesday"},
+  {name:"Gentri Jr.", rest:"Thursday"},
+  {name:"Tanza", rest:"Monday"},
+  {name:"Kawit", rest:"Tuesday"},
+  {name:"Tanza Paradahan", rest:"Tuesday"},
+  {name:"GMA", rest:"Tuesday"},
+  {name:"Tagaytay", rest:"Tuesday"},
+  {name:"Molino", rest:"Monday"},
+  {name:"Paliparan", rest:"Monday"},
+  {name:"San Pedro", rest:"Tuesday"},
+  {name:"Pacita", rest:"Monday"},
+  {name:"Binan Bayan", rest:"Monday"},
+  {name:"Crossing East", rest:"Monday"},
+  {name:"Anabu (Yssabelle)", rest:"Tuesday"},
+  {name:"Anabu (Ian)", rest:"Monday"}
+];
+
+// ================= DOM =================
 const storeSelect = document.getElementById("store");
 const override = document.getElementById("override");
 const totalInput = document.getElementById("total");
 const nonapps = document.getElementById("nonapps");
 const dateInput = document.getElementById("date");
-const signedInput = document.getElementById("signed");
-const rejectedInput = document.getElementById("rejected");
-const cancelledInput = document.getElementById("cancelled");
 
 let todayEntries = [];
-let historyStack = [];
 
-// STORES
-const stores = [
-  "Brookside","Manggahan","Bacoor","Dasmarinas","Tanza",
-  "Kawit","GMA","San Pedro","Pacita","Paliparan"
-];
-
+// ================= INIT STORES =================
 stores.forEach(s=>{
-  let opt=document.createElement("option");
-  opt.value=s;
-  opt.text=s;
+  let opt = document.createElement("option");
+  opt.value = s.name;
+  opt.text = s.name;
   storeSelect.add(opt);
 });
 
-// DATE
+// ================= DATE =================
 dateInput.value = new Date().toISOString().split("T")[0];
 
-// NON APPS RULE
+// ================= NON APPS RULE =================
 totalInput.addEventListener("input", ()=>{
   const v = Number(totalInput.value);
   nonapps.disabled = !(v === 0 || v === 1);
 });
 
-// -------------------------
-// 🔥 ADD ENTRY
-// -------------------------
+// ================= GET DAY =================
+function getDayName(d){
+  return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(d).getDay()];
+}
+
+// ================= ADD ENTRY =================
 function addEntry(){
 
   if(!dateInput.value || !storeSelect.value){
     return alert("Select date and store");
   }
 
+  const storeData = stores.find(s => s.name === storeSelect.value);
+
+  let status =
+    override.value ||
+    (getDayName(dateInput.value) === storeData.rest ? "Rest Day" : "Working");
+
   let entry = {
     date: dateInput.value,
     store: storeSelect.value,
+    status,
     total: Number(totalInput.value)||0,
-    signed: Number(signedInput.value)||0,
-    rejected: Number(rejectedInput.value)||0,
-    cancelled: Number(cancelledInput.value)||0,
+    signed: Number(document.getElementById("signed").value)||0,
+    rejected: Number(document.getElementById("rejected").value)||0,
+    cancelled: Number(document.getElementById("cancelled").value)||0,
     nonapps: nonapps.value || "-"
   };
 
   todayEntries.push(entry);
   renderPreview();
-  clearForm();
 }
 
-// -------------------------
-// 🧹 CLEAR FORM
-// -------------------------
-function clearForm(){
-  storeSelect.selectedIndex = 0;
-  totalInput.value = "";
-  signedInput.value = "";
-  rejectedInput.value = "";
-  cancelledInput.value = "";
-  nonapps.value = "";
-}
-
-// -------------------------
-// 📦 SAVE ALL TODAY
-// -------------------------
+// ================= SAVE ALL =================
 function saveAllToday(){
 
   if(todayEntries.length === 0){
@@ -164,62 +171,124 @@ function saveAllToday(){
     batch.set(ref, {...e, timestamp: Date.now()});
   });
 
-  batch.commit().then(()=>{
+  batch.commit().then(async ()=>{
 
-    // 🔥 IMPORTANT: update monthly totals (APPEND ONLY)
-    todayEntries.forEach(e=>{
-      updateMonthlyTotals(e);
-    });
+    alert("Saved successfully!");
 
-    alert("Saved!");
     todayEntries = [];
     renderPreview();
+
+    await recalcMonthlyTotals(); // 🔥 FULL RESET APPROACH
+
   });
 }
 
-// -------------------------
-// 🔥 APPEND ONLY MONTHLY TOTALS (KEY FIX)
-// -------------------------
-function updateMonthlyTotals(entry){
+// ================= RECALCULATE MONTHLY TOTALS =================
+async function recalcMonthlyTotals(){
 
-  const month = entry.date.substring(0,7);
-  const docId = month + "_" + entry.store;
+  const snap = await db.collection("reports").get();
 
-  const ref = db.collection("monthly_totals").doc(docId);
+  let totals = {};
 
-  return db.runTransaction(async (tx)=>{
+  snap.forEach(doc=>{
+    let d = doc.data();
 
-    const snap = await tx.get(ref);
+    let month = d.date.substring(0,7);
+    let key = month + "_" + d.store;
 
-    if(!snap.exists){
-
-      tx.set(ref,{
+    if(!totals[key]){
+      totals[key] = {
         month,
-        store: entry.store,
-        total: entry.total,
-        signed: entry.signed,
-        rejected: entry.rejected,
-        cancelled: entry.cancelled
-      });
-
-    } else {
-
-      let d = snap.data();
-
-      tx.update(ref,{
-        total: (d.total || 0) + entry.total,
-        signed: (d.signed || 0) + entry.signed,
-        rejected: (d.rejected || 0) + entry.rejected,
-        cancelled: (d.cancelled || 0) + entry.cancelled
-      });
-
+        store: d.store,
+        total:0,
+        signed:0,
+        rejected:0,
+        cancelled:0
+      };
     }
+
+    totals[key].total += Number(d.total||0);
+    totals[key].signed += Number(d.signed||0);
+    totals[key].rejected += Number(d.rejected||0);
+    totals[key].cancelled += Number(d.cancelled||0);
+  });
+
+  // overwrite monthly collection
+  let batch = db.batch();
+  let col = db.collection("monthly_totals");
+
+  const old = await col.get();
+  old.forEach(doc=>{
+    batch.delete(doc.ref);
+  });
+
+  Object.values(totals).forEach(t=>{
+    let ref = col.doc(t.month + "_" + t.store);
+    batch.set(ref, t);
+  });
+
+  await batch.commit();
+}
+
+// ================= VIEW PREVIOUS DATA =================
+function loadPreviousData(){
+
+  db.collection("reports").orderBy("timestamp","desc")
+  .onSnapshot(snapshot=>{
+
+    const table = document.getElementById("report");
+
+    table.innerHTML = `
+      <tr>
+        <th>Date</th><th>Store</th><th>Status</th>
+        <th>Total</th><th>Signed</th>
+        <th>Rejected</th><th>Cancelled</th><th>Non Apps</th>
+      </tr>
+    `;
+
+    snapshot.forEach(doc=>{
+      let d = doc.data();
+
+      let row = table.insertRow();
+      row.insertCell().innerText = d.date;
+      row.insertCell().innerText = d.store;
+      row.insertCell().innerText = d.status;
+      row.insertCell().innerText = d.total;
+      row.insertCell().innerText = d.signed;
+      row.insertCell().innerText = d.rejected;
+      row.insertCell().innerText = d.cancelled;
+      row.insertCell().innerText = d.nonapps;
+    });
   });
 }
 
-// -------------------------
-// 🔄 LOAD MONTHLY TOTALS (REALTIME)
-// -------------------------
+// ================= PREVIEW =================
+function renderPreview(){
+
+  const table = document.getElementById("previewTable");
+
+  table.innerHTML = `
+    <tr>
+      <th>Date</th><th>Store</th><th>Status</th>
+      <th>Total</th><th>Signed</th>
+      <th>Rejected</th><th>Cancelled</th><th>Non Apps</th>
+    </tr>
+  `;
+
+  todayEntries.forEach(e=>{
+    let row = table.insertRow();
+    row.insertCell().innerText = e.date;
+    row.insertCell().innerText = e.store;
+    row.insertCell().innerText = e.status;
+    row.insertCell().innerText = e.total;
+    row.insertCell().innerText = e.signed;
+    row.insertCell().innerText = e.rejected;
+    row.insertCell().innerText = e.cancelled;
+    row.insertCell().innerText = e.nonapps;
+  });
+}
+
+// ================= MONTHLY LIVE =================
 db.collection("monthly_totals").onSnapshot(snapshot=>{
 
   const table = document.getElementById("monthlyTotals");
@@ -233,7 +302,6 @@ db.collection("monthly_totals").onSnapshot(snapshot=>{
   `;
 
   snapshot.forEach(doc=>{
-
     let d = doc.data();
 
     let row = table.insertRow();
@@ -245,45 +313,6 @@ db.collection("monthly_totals").onSnapshot(snapshot=>{
     row.insertCell().innerText = d.cancelled;
   });
 });
-
-// -------------------------
-// 📦 PREVIEW TABLE
-// -------------------------
-function renderPreview(){
-
-  const table = document.getElementById("previewTable");
-
-  table.innerHTML = `
-    <tr>
-      <th>Date</th><th>Store</th><th>Total</th>
-      <th>Signed</th><th>Rejected</th>
-      <th>Cancelled</th><th>Non Apps</th>
-    </tr>
-  `;
-
-  todayEntries.forEach(e=>{
-    let row = table.insertRow();
-    row.insertCell().innerText = e.date;
-    row.insertCell().innerText = e.store;
-    row.insertCell().innerText = e.total;
-    row.insertCell().innerText = e.signed;
-    row.insertCell().innerText = e.rejected;
-    row.insertCell().innerText = e.cancelled;
-    row.insertCell().innerText = e.nonapps;
-  });
-}
-
-// -------------------------
-// ↩️ UNDO (LOCAL ONLY)
-// -------------------------
-function undoLast(){
-  if(todayEntries.length === 0){
-    return alert("Nothing to undo");
-  }
-
-  todayEntries.pop();
-  renderPreview();
-}
 
 </script>
 
