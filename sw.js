@@ -1,6 +1,6 @@
-const CACHE_NAME = "hcpg-report-v2";
+const CACHE_NAME = "hcpg-report-v3";
 
-// Only core files (keep minimal to avoid stale bugs)
+// Only essential files (keep minimal to avoid stale cache issues)
 const urlsToCache = [
   "./",
   "./index.html"
@@ -14,7 +14,7 @@ self.addEventListener("install", event => {
     })
   );
 
-  // Force new service worker immediately
+  // Activate immediately
   self.skipWaiting();
 });
 
@@ -35,20 +35,19 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// FETCH (network-first for always-updated reports)
+// FETCH (network-first so Firebase + updates always fresh)
 self.addEventListener("fetch", event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Clone and store fresh version
         let clone = response.clone();
+
         caches.open(CACHE_NAME).then(cache => {
           cache.put(event.request, clone);
         });
+
         return response;
       })
-      .catch(() => {
-        return caches.match(event.request);
-      })
+      .catch(() => caches.match(event.request))
   );
 });
