@@ -1,86 +1,101 @@
-# 📊 HC/PG SA Dashboard (Shared Firebase System)
+# 📊 HC/PG SA Monthly Report System
 
-A real-time reporting system for store performance tracking.
-
----
-
-## 🚀 Features
-
-- 🌐 Shared live database (Firebase Firestore)
-- 📊 Daily + Monthly reports
-- 🏪 Store performance totals
-- ➕ Add / undo entries
-- 📱 Installable as mobile app (PWA)
-- ⚡ Real-time updates for all users
+A Firebase-powered reporting system with batch saving, real-time previews, and fully recalculated monthly totals.
 
 ---
 
-## 🔥 Tech Stack
+# 🚀 FEATURES
 
-- HTML / CSS / JavaScript
-- Firebase Firestore (backend)
-- Service Worker (offline support)
-- PWA manifest
-
----
-
-## 📦 How It Works
-
-### 1. Daily Entries
-Users input:
-- Date
-- Store
-- Total, Signed, Rejected, Cancelled
+## 📦 Daily Encoding System
+- Add multiple store entries per day
+- Auto-detect rest day based on schedule
+- Preview entries before saving
+- Prevent duplicate entry errors
 
 ---
 
-### 2. Shared Database
-All entries are stored in:
-
-Firestore → reports
-
----
-
-### 3. Monthly Totals
-Automatically stored in:
-
-Firestore → monthly_totals
-
-✔ Data is APPEND-ONLY  
-✔ Never decreases  
-✔ Safe for auditing  
+## 💾 Save All (Batch System)
+- Saves all entries in one transaction
+- Clears daily input after successful save
+- Refreshes preview table automatically
 
 ---
 
-## 📲 Install as App
+## 📊 Monthly Totals (100% ACCURATE SYSTEM)
 
-On mobile:
-1. Open site in Chrome
-2. Tap "Add to Home Screen"
-3. Install
+Instead of incrementing values, the system:
 
----
+✔ Reads all `reports` data  
+✔ Recalculates totals from scratch  
+✔ Rebuilds `monthly_totals` collection  
 
-## ⚙️ Setup
-
-1. Create Firebase project
-2. Enable Firestore
-3. Paste config in `index.html`
-4. Set rules:
-allow read, write: if true;
----
-
-## 🧠 Important Notes
-
-- Monthly totals are permanent (append-only)
-- Deleting entries does NOT affect monthly totals
-- Designed for multi-user shared reporting
+### Benefits:
+- No duplication bugs
+- No inflation errors
+- Always correct data
 
 ---
 
-## 🚀 Future Upgrades
+## 📂 View Previous Data
+- Shows full history of all saved entries
+- Sorted by newest first
+- Useful for auditing and corrections
 
-- Admin login system
-- Charts & analytics
-- Export to Excel
-- Store ranking system
+---
+
+## 📱 PWA SUPPORT
+- Installable on mobile/desktop
+- Works offline for UI shell
+- Fast loading with caching system
+
+---
+
+# 🧠 DATA STRUCTURE
+
+## reports collection
+Each entry:
+- date
+- store
+- status
+- total
+- signed
+- rejected
+- cancelled
+- nonapps
+- timestamp
+
+---
+
+## monthly_totals collection
+Auto-generated:
+- month
+- store
+- total
+- signed
+- rejected
+- cancelled
+
+---
+
+# ⚠️ IMPORTANT NOTES
+
+- Monthly totals are NOT manually edited
+- They are fully rebuilt after every save
+- This ensures 100% accuracy
+- Do NOT modify monthly_totals directly
+
+---
+
+# 🔧 DEPLOYMENT
+
+If updates don’t reflect:
+
+1. Clear browser cache
+2. Hard refresh (Ctrl + Shift + R)
+3. Update service worker version in `sw.js`
+
+---
+
+# 📌 VERSION
+
+v6 - Fully Recalculated Reporting System
