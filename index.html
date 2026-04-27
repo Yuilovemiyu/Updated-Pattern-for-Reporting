@@ -26,7 +26,7 @@
 
 <body>
 
-<h2>📊 HC/PG SA Monthly Report (FINAL FIXED SYSTEM)</h2>
+<h2>📊 HC/PG SA Monthly Report (FINAL SYSTEM)</h2>
 
 <input type="date" id="date">
 
@@ -60,16 +60,16 @@
 <h3>📋 Full Report</h3>
 <table id="report"></table>
 
-<h3>📅 Monthly Totals (AUTO RECALCULATED)</h3>
+<h3>📅 Monthly Totals</h3>
 <table id="monthlyTotals"></table>
 
 <script>
 
 // ================= FIREBASE =================
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID"
+  apiKey: "AIzaSyBoPZ6nioxI_fzVrdLSh-pQ_EEqSdPOnrY",
+  authDomain: "pattern-for-reporting.firebaseapp.com",
+  projectId: "pattern-for-reporting"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -114,26 +114,22 @@ stores.forEach(s=>{
   storeSelect.add(opt);
 });
 
-// ================= DATE =================
+// DATE
 dateInput.value = new Date().toISOString().split("T")[0];
 
-// ================= NON APPS RULE =================
+// NON APPS RULE
 totalInput.addEventListener("input", ()=>{
   const v = Number(totalInput.value);
   nonapps.disabled = !(v === 0 || v === 1);
 });
 
-// ================= GET DAY =================
+// ================= DAY =================
 function getDayName(d){
   return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(d).getDay()];
 }
 
-// ================= ADD ENTRY =================
+// ================= ADD =================
 function addEntry(){
-
-  if(!dateInput.value || !storeSelect.value){
-    return alert("Select date and store");
-  }
 
   const storeData = stores.find(s => s.name === storeSelect.value);
 
@@ -156,34 +152,92 @@ function addEntry(){
   renderPreview();
 }
 
+// ================= EDIT =================
+function loadToForm(index){
+
+  let e = todayEntries[index];
+
+  dateInput.value = e.date;
+  storeSelect.value = e.store;
+
+  totalInput.value = e.total;
+  document.getElementById("signed").value = e.signed;
+  document.getElementById("rejected").value = e.rejected;
+  document.getElementById("cancelled").value = e.cancelled;
+
+  nonapps.value = e.nonapps;
+
+  todayEntries.splice(index,1);
+  renderPreview();
+}
+
+// ================= PREVIEW =================
+function renderPreview(){
+
+  const table = document.getElementById("previewTable");
+
+  table.innerHTML = `
+    <tr>
+      <th>Date</th><th>Store</th><th>Status</th>
+      <th>Total</th><th>Signed</th>
+      <th>Rejected</th><th>Cancelled</th><th>Non Apps</th><th>Action</th>
+    </tr>
+  `;
+
+  todayEntries.forEach((e,i)=>{
+
+    let row = table.insertRow();
+
+    row.insertCell().innerText = e.date;
+    row.insertCell().innerText = e.store;
+    row.insertCell().innerText = e.status;
+    row.insertCell().innerText = e.total;
+    row.insertCell().innerText = e.signed;
+    row.insertCell().innerText = e.rejected;
+    row.insertCell().innerText = e.cancelled;
+    row.insertCell().innerText = e.nonapps;
+
+    let cell = row.insertCell();
+
+    let edit = document.createElement("button");
+    edit.innerText = "Edit";
+    edit.onclick = ()=>loadToForm(i);
+
+    let del = document.createElement("button");
+    del.innerText = "Delete";
+    del.className = "delete-btn";
+    del.onclick = ()=>{ todayEntries.splice(i,1); renderPreview(); };
+
+    cell.appendChild(edit);
+    cell.appendChild(del);
+  });
+}
+
 // ================= SAVE ALL =================
 function saveAllToday(){
 
-  if(todayEntries.length === 0){
-    return alert("No entries");
-  }
+  if(todayEntries.length === 0) return alert("No entries");
 
   let batch = db.batch();
   let col = db.collection("reports");
 
   todayEntries.forEach(e=>{
     let ref = col.doc();
-    batch.set(ref, {...e, timestamp: Date.now()});
+    batch.set(ref,{...e,timestamp:Date.now()});
   });
 
   batch.commit().then(async ()=>{
 
-    alert("Saved successfully!");
+    alert("Saved!");
 
     todayEntries = [];
     renderPreview();
 
-    await recalcMonthlyTotals(); // 🔥 FULL RESET APPROACH
-
+    await recalcMonthlyTotals();
   });
 }
 
-// ================= RECALCULATE MONTHLY TOTALS =================
+// ================= RECALCULATE MONTHLY =================
 async function recalcMonthlyTotals(){
 
   const snap = await db.collection("reports").get();
@@ -213,24 +267,21 @@ async function recalcMonthlyTotals(){
     totals[key].cancelled += Number(d.cancelled||0);
   });
 
-  // overwrite monthly collection
   let batch = db.batch();
   let col = db.collection("monthly_totals");
 
   const old = await col.get();
-  old.forEach(doc=>{
-    batch.delete(doc.ref);
-  });
+  old.forEach(doc=>batch.delete(doc.ref));
 
   Object.values(totals).forEach(t=>{
     let ref = col.doc(t.month + "_" + t.store);
-    batch.set(ref, t);
+    batch.set(ref,t);
   });
 
   await batch.commit();
 }
 
-// ================= VIEW PREVIOUS DATA =================
+// ================= LOAD PREVIOUS =================
 function loadPreviousData(){
 
   db.collection("reports").orderBy("timestamp","desc")
@@ -259,32 +310,6 @@ function loadPreviousData(){
       row.insertCell().innerText = d.cancelled;
       row.insertCell().innerText = d.nonapps;
     });
-  });
-}
-
-// ================= PREVIEW =================
-function renderPreview(){
-
-  const table = document.getElementById("previewTable");
-
-  table.innerHTML = `
-    <tr>
-      <th>Date</th><th>Store</th><th>Status</th>
-      <th>Total</th><th>Signed</th>
-      <th>Rejected</th><th>Cancelled</th><th>Non Apps</th>
-    </tr>
-  `;
-
-  todayEntries.forEach(e=>{
-    let row = table.insertRow();
-    row.insertCell().innerText = e.date;
-    row.insertCell().innerText = e.store;
-    row.insertCell().innerText = e.status;
-    row.insertCell().innerText = e.total;
-    row.insertCell().innerText = e.signed;
-    row.insertCell().innerText = e.rejected;
-    row.insertCell().innerText = e.cancelled;
-    row.insertCell().innerText = e.nonapps;
   });
 }
 
