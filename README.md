@@ -1,74 +1,74 @@
 # 📊 HC/PG SA Monthly Report System
 
-A web-based reporting system for store performance tracking using Firebase Firestore + PWA support.
+A lightweight Firebase-based reporting system for store performance tracking.
 
 ---
 
 ## 🚀 Features
 
-### 📍 Data Entry System
-- Daily store report input
-- Auto status detection (Working / Rest Day / Override)
+### 📍 Daily Reporting
+- Store-based data entry
+- Auto status detection:
+  - Working
+  - Rest Day
+  - Manual override
 - Tracks:
+  - Total Applications
+  - Signed
+  - Rejected
+  - Cancelled
+  - Non Apps (auto-enabled for low totals)
+
+---
+
+### 💾 Simple Save System
+- Direct save to Firebase Firestore
+- Prevents duplicate entries per store per date
+- No queue or batch system (simplified workflow)
+
+---
+
+### 🗑️ Data Management
+- Delete entries instantly
+- Undo last deletion supported
+
+---
+
+### 📊 Monthly Summary
+- Automatic aggregation per store
+- Monthly totals include:
   - Total Apps
   - Signed
   - Rejected
   - Cancelled
-  - Non Apps (conditional enable)
-
----
-
-### 📦 NEW: Batch Save System (Queue Mode)
-
-Instead of saving one-by-one, users can now:
-
-- ➕ Add multiple entries to a queue
-- 📋 Preview all pending entries
-- 💾 Save everything at once using **Save All**
-- 🔄 Prevents accidental duplicate writes
-- ⚡ Faster bulk encoding for monthly reporting
-
----
-
-### 📊 Reporting Features
-- Live Firestore sync
-- Auto-updating report table
-- Monthly totals per store
-- Automatic aggregation per month
-
----
-
-### ↩️ Undo System
-- Restore deleted entries instantly
 
 ---
 
 ## 🔥 Tech Stack
 - HTML + JavaScript
 - Firebase Firestore
-- Service Worker (PWA support)
+- Service Worker (PWA caching)
 
 ---
 
 ## 📱 PWA Support
-This app supports offline caching using a service worker:
-- Loads instantly after first visit
-- Works with cached UI
-- Auto-updates when new version is deployed
+- Offline-friendly caching (basic)
+- Fast load after first visit
+- Auto updates when service worker version changes
 
 ---
 
-## 🛠 Deployment Notes
+## ⚠️ Deployment Notes
 
-If updates don’t reflect:
+If changes don’t appear:
 - Hard refresh browser (Ctrl + Shift + R)
 - Clear cache / unregister service worker
-- Ensure `sw.js` cache version is updated
+- Ensure `sw.js` cache version is updated (v3)
 
 ---
 
 ## 📌 Version
-v2 - Batch Save System Added
+v3 - Simplified System (No Edit, No Queue, Delete Only)
 
 ---
 
