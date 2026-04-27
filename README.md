@@ -1,190 +1,86 @@
-# 📊 HC/PG SA Monthly Report System
+# 📊 HC/PG SA Dashboard (Shared Firebase System)
 
-A Firebase-powered web app for daily store reporting with batch saving, auto-recovery, and real-time monthly totals.
-
----
-
-## 🚀 Core Features
-
-### 📍 Daily Data Entry
-- Input store performance per day
-- Auto-detect:
-  - Working
-  - Rest Day
-- Manual override available
-
-Tracks:
-- Total Apps
-- Signed
-- Rejected
-- Cancelled
-- Non Apps (enabled only if total = 0 or 1)
+A real-time reporting system for store performance tracking.
 
 ---
 
-## 📦 Preview System (Before Saving)
-- Displays all entries for the day before submission
-- Remove incorrect entries easily
-- Prevents duplicate store entries per day
+## 🚀 Features
+
+- 🌐 Shared live database (Firebase Firestore)
+- 📊 Daily + Monthly reports
+- 🏪 Store performance totals
+- ➕ Add / undo entries
+- 📱 Installable as mobile app (PWA)
+- ⚡ Real-time updates for all users
 
 ---
 
-## 💾 Save System
-
-### ➕ Add Entry
-- Saves data locally (not yet in Firebase)
-- Allows batch encoding
-
-### 💾 Save All (Today)
-- Saves all entries in one batch to Firebase
-- Prevents duplicates in database
-- Clears data after successful save
-
----
-
-## 🔄 Auto-Save & Recovery
-- Uses **localStorage**
-- Protects data when:
-  - Page is refreshed
-  - Browser is closed
-  - Internet is lost
-
-### 🔁 Auto Restore
-- Unsaved entries are restored automatically on reload
-
----
-
-## 🧹 Smart Reset After Save
-After saving:
-- Clears preview entries
-- Clears local storage
-- Resets input fields
-- Ready for next day encoding
-
----
-
-## 🗑️ Data Management
-- Delete saved records
-- Undo last delete action
-
----
-
-## 📊 Monthly Totals (Per Store)
-
-- Auto-updates in real-time
-- Groups data by:
-  - Month
-  - Store
-
-### ✔ Includes:
-- Total Apps
-- Signed
-- Rejected
-- Cancelled
-
-### ❌ Excludes:
-- Rest Day
-- Absent entries
-
-### ✔ Features:
-- Clean accumulation per month
-- Sorted output (Month → Store)
-- Updates automatically after each save
-
----
-
-## 📱 Progressive Web App (PWA)
-
-- Installable on mobile/desktop
-- Works like a native app
-- Cached shell for fast loading
-- Network-first strategy for fresh data
-
----
-
-## 🛠 Tech Stack
+## 🔥 Tech Stack
 
 - HTML / CSS / JavaScript
-- Firebase Firestore
-- Service Worker
-- LocalStorage
+- Firebase Firestore (backend)
+- Service Worker (offline support)
+- PWA manifest
 
 ---
 
-## ⚠️ Deployment Tips
+## 📦 How It Works
 
-If updates are not visible:
-
-1. Hard refresh:
-   - `Ctrl + Shift + R`
-2. Clear browser cache
-3. Unregister Service Worker:
-   - DevTools → Application → Service Workers
-4. Update `CACHE_NAME` in `sw.js`
+### 1. Daily Entries
+Users input:
+- Date
+- Store
+- Total, Signed, Rejected, Cancelled
 
 ---
 
-## 📌 Version
+### 2. Shared Database
+All entries are stored in:
 
-**v5 – Preview + Batch Save + Auto-Recovery + Clean Monthly Totals**
+Firestore → reports
 
-Includes:
-- Preview table before saving
-- Local auto-save protection
-- Batch Firebase saving
-- Monthly totals filtering (working days only)
-- Full reset after save
 ---
 
-## 📊 Monthly Totals Logic
+### 3. Monthly Totals
+Automatically stored in:
 
-Monthly table shows:
+Firestore → monthly_totals
 
-- Total Apps per store per month
-- Signed
-- Rejected
-- Cancelled
+✔ Data is APPEND-ONLY  
+✔ Never decreases  
+✔ Safe for auditing  
 
-Grouped by:
-Month + Store
 ---
 
-## 🔥 Setup
+## 📲 Install as App
+
+On mobile:
+1. Open site in Chrome
+2. Tap "Add to Home Screen"
+3. Install
+
+---
+
+## ⚙️ Setup
 
 1. Create Firebase project
-2. Enable Firestore Database
-3. Use test rules (for development only):
-
+2. Enable Firestore
+3. Paste config in `index.html`
+4. Set rules:
 allow read, write: if true;
 ---
 
-## 📁 Files
+## 🧠 Important Notes
 
-- index.html
-- sw.js
-- manifest.json
-
----
-
-## 📲 Install App
-
-- Open in Chrome
-- Click "Install App"
-- Works like mobile app
+- Monthly totals are permanent (append-only)
+- Deleting entries does NOT affect monthly totals
+- Designed for multi-user shared reporting
 
 ---
 
-## ⚠️ Notes
+## 🚀 Future Upgrades
 
-- Requires internet (Firebase backend)
-- Service Worker caches UI only
-- Works best on Chrome / Edge
-
----
-
-## 🛠 Future upgrades
-
-- Login per user
-- Store ranking dashboard
+- Admin login system
 - Charts & analytics
-- Export to Excel / PDF
+- Export to Excel
+- Store ranking system
