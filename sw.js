@@ -1,6 +1,6 @@
-const CACHE_NAME = "hcpg-report-v4";
+const CACHE_NAME = "hcpg-report-v5";
 
-// Only cache core shell
+// Only cache core files
 const urlsToCache = [
   "./",
   "./index.html"
@@ -14,7 +14,7 @@ self.addEventListener("install", event => {
   );
 });
 
-// ACTIVATE
+// ACTIVATE (clean old caches)
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -26,7 +26,7 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// FETCH (network-first)
+// FETCH (network first, fallback cache)
 self.addEventListener("fetch", event => {
   event.respondWith(
     fetch(event.request)
