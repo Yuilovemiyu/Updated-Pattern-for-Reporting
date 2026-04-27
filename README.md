@@ -1,32 +1,32 @@
 # HC/PG SA Monthly Report System
 
-## Features
-- Daily encoding per store
+## FEATURES
+- Daily entry encoding
 - Edit & delete before saving
-- Batch save (Save All)
-- Full report viewer
-- Monthly totals auto-recalculated from reports
+- Batch Save All system
+- Previous data viewer
+- Monthly totals auto-recalculated
+- Real-time date update
+- Auto form reset
 
-## System Logic
-- Monthly totals are NOT manually stored
-- They are recalculated from `reports` collection
-- Ensures 100% accuracy (no duplication bugs)
+---
 
-## Functions
-- Add Entry
-- Edit Entry (before saving)
-- Delete Entry (before saving)
-- Save All (batch upload)
-- View previous data
-- Auto monthly rebuild
+## DATA LOGIC
+- `reports` = raw daily entries
+- `monthly_totals` = fully recalculated from reports
 
-## Firestore Collections
-### reports
-Stores all daily entries
+No manual editing allowed on monthly totals.
 
-### monthly_totals
-Auto-generated summary (recomputed)
+---
 
-## Notes
-- Do NOT manually edit monthly_totals
-- Always use Save All for consistency
+## SYSTEM BEHAVIOR
+- Add entries → preview list
+- Save All → batch upload
+- After save → rebuild monthly totals
+- View history anytime
+
+---
+
+## PWA
+- Installable app
+- Offline UI caching (service worker)
