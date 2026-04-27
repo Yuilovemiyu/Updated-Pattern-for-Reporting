@@ -1,4 +1,4 @@
-const CACHE_NAME = "hcpg-final-v1";
+const CACHE_NAME = "hcpg-final-v2";
 
 self.addEventListener("install", e => {
   self.skipWaiting();
