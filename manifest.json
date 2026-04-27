@@ -2,9 +2,11 @@
   "name": "HC/PG SA Monthly Report",
   "short_name": "StoreReport",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#005bac",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
