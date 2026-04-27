@@ -1,40 +1,54 @@
-const CACHE_NAME = "hc-pg-sa-cache-v1";
+const CACHE_NAME = "hcpg-report-v2";
 
-const FILES_TO_CACHE = [
+// Only core files (keep minimal to avoid stale bugs)
+const urlsToCache = [
   "./",
-  "./index.html",
-  "./manifest.json"
+  "./index.html"
 ];
 
-// Install
-self.addEventListener("install", (event) => {
+// INSTALL
+self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(FILES_TO_CACHE);
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(urlsToCache);
     })
   );
+
+  // Force new service worker immediately
+  self.skipWaiting();
 });
 
-// Activate
-self.addEventListener("activate", (event) => {
+// ACTIVATE
+self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.map(key => {
           if (key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })
-      );
-    })
+      )
+    )
   );
+
+  self.clients.claim();
 });
 
-// Fetch
-self.addEventListener("fetch", (event) => {
+// FETCH (network-first for always-updated reports)
+self.addEventListener("fetch", event => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then(response => {
+        // Clone and store fresh version
+        let clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, clone);
+        });
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
