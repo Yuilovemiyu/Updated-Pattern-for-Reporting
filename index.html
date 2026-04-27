@@ -60,15 +60,9 @@
 
 <table id="report">
   <tr>
-    <th>Date</th>
-    <th>Store</th>
-    <th>Status</th>
-    <th>Total</th>
-    <th>Signed</th>
-    <th>Rejected</th>
-    <th>Cancelled</th>
-    <th>Non Apps</th>
-    <th>Action</th>
+    <th>Date</th><th>Store</th><th>Status</th>
+    <th>Total</th><th>Signed</th>
+    <th>Rejected</th><th>Cancelled</th><th>Non Apps</th><th>Action</th>
   </tr>
 </table>
 
@@ -101,8 +95,9 @@ const report = document.getElementById("report");
 const override = document.getElementById("override");
 const totalInput = document.getElementById("total");
 const nonapps = document.getElementById("nonapps");
+const dateInput = document.getElementById("date");
 
-// UNDO STACK
+// UNDO
 let historyStack = [];
 
 // STORE LIST
@@ -129,9 +124,9 @@ const stores = [
 
 // LOAD STORES
 stores.forEach(s=>{
-  let opt = document.createElement("option");
-  opt.value = s.name;
-  opt.text = s.name;
+  let opt=document.createElement("option");
+  opt.value=s.name;
+  opt.text=s.name;
   storeSelect.add(opt);
 });
 
@@ -139,6 +134,18 @@ stores.forEach(s=>{
 function getDayName(d){
   return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(d).getDay()];
 }
+
+// 📅 REAL-TIME DATE
+function setToday(){
+  const today = new Date().toISOString().split("T")[0];
+  dateInput.value = today;
+}
+setToday();
+
+// auto-update daily
+setInterval(()=>{
+  setToday();
+},60000);
 
 // 🔥 NON APPS ENABLE RULE
 totalInput.addEventListener("input", ()=>{
@@ -154,7 +161,7 @@ totalInput.addEventListener("input", ()=>{
 
 // RESET FORM
 function resetForm(){
-  document.getElementById("date").value = "";
+  setToday();
   storeSelect.selectedIndex = 0;
   override.value = "";
   totalInput.value = "";
@@ -168,7 +175,7 @@ function resetForm(){
 
 // ADD ENTRY
 function addEntry(){
-  const date = document.getElementById("date").value;
+  const date = dateInput.value;
   const store = storeSelect.value;
 
   if(!date || !store) return alert("Select date and store");
@@ -187,10 +194,7 @@ function addEntry(){
     signed: Number(document.getElementById("signed").value || 0),
     rejected: Number(document.getElementById("rejected").value || 0),
     cancelled: Number(document.getElementById("cancelled").value || 0),
-
-    // 🔥 NON APPS
     nonapps: nonapps.value || "-",
-
     timestamp: Date.now()
   };
 
@@ -205,7 +209,7 @@ function addEntry(){
       }
 
       db.collection("reports").add(data).then(()=>{
-        resetForm(); // 🔥 refresh dropdowns after submit
+        resetForm(); // 🔥 refresh dropdowns
       });
     });
 }
@@ -214,15 +218,9 @@ function addEntry(){
 db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
   report.innerHTML = `
     <tr>
-      <th>Date</th>
-      <th>Store</th>
-      <th>Status</th>
-      <th>Total</th>
-      <th>Signed</th>
-      <th>Rejected</th>
-      <th>Cancelled</th>
-      <th>Non Apps</th>
-      <th>Action</th>
+      <th>Date</th><th>Store</th><th>Status</th>
+      <th>Total</th><th>Signed</th>
+      <th>Rejected</th><th>Cancelled</th><th>Non Apps</th><th>Action</th>
     </tr>
   `;
 
@@ -270,17 +268,16 @@ function undoLast(){
   db.collection("reports").doc(last.id).set(last.data);
 }
 
-// MONTHLY TOTALS (PER STORE)
+// MONTHLY TOTALS PER STORE
 function updateMonthlyTotals(data){
   let totals = {};
 
   data.forEach(d=>{
-    let month = d.date.substring(0,7);
-    let key = month + "_" + d.store;
+    let key = d.date.substring(0,7) + "_" + d.store;
 
     if(!totals[key]){
       totals[key] = {
-        month,
+        month: d.date.substring(0,7),
         store: d.store,
         total:0,
         signed:0,
@@ -299,12 +296,9 @@ function updateMonthlyTotals(data){
 
   table.innerHTML = `
     <tr>
-      <th>Month</th>
-      <th>Store</th>
-      <th>Total Apps</th>
-      <th>Signed</th>
-      <th>Rejected</th>
-      <th>Cancelled</th>
+      <th>Month</th><th>Store</th>
+      <th>Total Apps</th><th>Signed</th>
+      <th>Rejected</th><th>Cancelled</th>
     </tr>
   `;
 
