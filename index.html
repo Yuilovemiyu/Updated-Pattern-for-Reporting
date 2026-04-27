@@ -54,7 +54,8 @@
   <option value="No">No</option>
 </select>
 
-<button onclick="addEntry()">💾 Save Entry</button>
+<button onclick="addEntry()">➕ Add Entry</button>
+<button onclick="saveAllToday()">💾 Save All (Today)</button>
 <button onclick="clearForm()">🧹 Clear</button>
 <button onclick="undoLast()">↩️ Undo</button>
 
@@ -97,6 +98,26 @@ const nonapps = document.getElementById("nonapps");
 const dateInput = document.getElementById("date");
 
 let historyStack = [];
+let todayEntries = [];
+
+// 🔄 LOCAL STORAGE LOAD
+function loadLocal(){
+  const data = localStorage.getItem("todayEntries");
+  if(data){
+    todayEntries = JSON.parse(data);
+  }
+}
+loadLocal();
+
+// 💾 SAVE LOCAL
+function saveLocal(){
+  localStorage.setItem("todayEntries", JSON.stringify(todayEntries));
+}
+
+// 🚪 SAVE ON EXIT
+window.addEventListener("beforeunload", () => {
+  saveLocal();
+});
 
 // STORE LIST
 const stores = [
@@ -156,12 +177,18 @@ function clearForm(){
   nonapps.disabled = true;
 }
 
-// SAVE ENTRY (ONLY NEW)
+// ➕ ADD ENTRY (LOCAL ONLY)
 function addEntry(){
   const date = dateInput.value;
   const store = storeSelect.value;
 
   if(!date || !store) return alert("Select date and store");
+
+  const exists = todayEntries.find(e => e.date === date && e.store === store);
+  if(exists){
+    alert("Already added for today");
+    return;
+  }
 
   const selectedStore = stores.find(s=>s.name===store);
 
@@ -177,24 +204,61 @@ function addEntry(){
     signed: Number(document.getElementById("signed").value || 0),
     rejected: Number(document.getElementById("rejected").value || 0),
     cancelled: Number(document.getElementById("cancelled").value || 0),
-    nonapps: nonapps.value || "-",
-    timestamp: Date.now()
+    nonapps: nonapps.value || "-"
   };
 
-  db.collection("reports")
-    .where("date","==",date)
-    .where("store","==",store)
-    .get()
-    .then(snapshot=>{
-      if(!snapshot.empty){
-        alert("Entry already exists");
-        return;
-      }
+  todayEntries.push(data);
+  saveLocal();
 
-      db.collection("reports").add(data).then(()=>{
-        clearForm();
+  alert("Added to today's entries");
+
+  clearForm();
+}
+
+// 💾 SAVE ALL
+function saveAllToday(){
+  if(todayEntries.length === 0){
+    return alert("No entries to save");
+  }
+
+  let batch = db.batch();
+  let collection = db.collection("reports");
+
+  Promise.all(
+    todayEntries.map(entry =>
+      collection
+        .where("date","==",entry.date)
+        .where("store","==",entry.store)
+        .get()
+    )
+  ).then(results => {
+
+    let hasDuplicate = false;
+
+    results.forEach((snapshot, index) => {
+      if(!snapshot.empty){
+        hasDuplicate = true;
+        alert(`Duplicate found: ${todayEntries[index].store}`);
+      }
+    });
+
+    if(hasDuplicate) return;
+
+    todayEntries.forEach(entry => {
+      let ref = collection.doc();
+      batch.set(ref, {
+        ...entry,
+        timestamp: Date.now()
       });
     });
+
+    batch.commit().then(()=>{
+      alert("All entries saved!");
+      todayEntries = [];
+      localStorage.removeItem("todayEntries");
+    });
+
+  });
 }
 
 // REALTIME LOAD
@@ -227,7 +291,6 @@ db.collection("reports").orderBy("timestamp").onSnapshot(snapshot=>{
 
     let action = row.insertCell();
 
-    // 🗑️ DELETE ONLY
     let delBtn = document.createElement("button");
     delBtn.innerText = "Delete";
     delBtn.className = "delete-btn";
