@@ -108,27 +108,48 @@ let todayEntries = [];
 
 // ================= INIT STORES =================
 stores.forEach(s=>{
-  let opt = document.createElement("option");
-  opt.value = s.name;
-  opt.text = s.name;
+  let opt=document.createElement("option");
+  opt.value=s.name;
+  opt.text=s.name;
   storeSelect.add(opt);
 });
 
-// DATE
-dateInput.value = new Date().toISOString().split("T")[0];
+// ================= REALTIME DATE =================
+function setToday(){
+  dateInput.value = new Date().toISOString().split("T")[0];
+}
+setToday();
+setInterval(setToday, 60000);
 
-// NON APPS RULE
+// ================= NON APPS RULE =================
 totalInput.addEventListener("input", ()=>{
   const v = Number(totalInput.value);
   nonapps.disabled = !(v === 0 || v === 1);
 });
+
+// ================= RESET FORM =================
+function resetForm(){
+
+  storeSelect.selectedIndex = 0;
+  override.selectedIndex = 0;
+
+  totalInput.value = "";
+  document.getElementById("signed").value = "";
+  document.getElementById("rejected").value = "";
+  document.getElementById("cancelled").value = "";
+
+  nonapps.value = "";
+  nonapps.disabled = true;
+
+  setToday();
+}
 
 // ================= DAY =================
 function getDayName(d){
   return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(d).getDay()];
 }
 
-// ================= ADD =================
+// ================= ADD ENTRY =================
 function addEntry(){
 
   const storeData = stores.find(s => s.name === storeSelect.value);
@@ -150,6 +171,7 @@ function addEntry(){
 
   todayEntries.push(entry);
   renderPreview();
+  resetForm();
 }
 
 // ================= EDIT =================
@@ -169,6 +191,8 @@ function loadToForm(index){
 
   todayEntries.splice(index,1);
   renderPreview();
+
+  resetForm();
 }
 
 // ================= PREVIEW =================
@@ -237,7 +261,7 @@ function saveAllToday(){
   });
 }
 
-// ================= RECALCULATE MONTHLY =================
+// ================= REBUILD MONTHLY =================
 async function recalcMonthlyTotals(){
 
   const snap = await db.collection("reports").get();
@@ -281,7 +305,7 @@ async function recalcMonthlyTotals(){
   await batch.commit();
 }
 
-// ================= LOAD PREVIOUS =================
+// ================= VIEW HISTORY =================
 function loadPreviousData(){
 
   db.collection("reports").orderBy("timestamp","desc")
