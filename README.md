@@ -1,102 +1,139 @@
 # 📊 HC/PG SA Monthly Report System
 
-A lightweight Firebase-based reporting web app with batch save and auto-recovery.
+A Firebase-powered web app for daily store reporting with batch saving, auto-recovery, and real-time monthly totals.
 
 ---
 
-## 🚀 Features
+## 🚀 Core Features
 
 ### 📍 Daily Data Entry
-- Input store performance data
+- Input store performance per day
 - Auto-detect:
   - Working
   - Rest Day
-  - Manual override available
+- Manual override available
 
 Tracks:
 - Total Apps
 - Signed
 - Rejected
 - Cancelled
-- Non Apps (auto-enabled for 0–1 total)
+- Non Apps (enabled only if total = 0 or 1)
 
 ---
 
-## 💾 Smart Save System
+## 📦 Preview System (Before Saving)
+- Displays all entries for the day before submission
+- Remove incorrect entries easily
+- Prevents duplicate store entries per day
+
+---
+
+## 💾 Save System
 
 ### ➕ Add Entry
-- Stores entry locally (not yet saved to Firebase)
-- Prevents duplicate store per day
+- Saves data locally (not yet in Firebase)
+- Allows batch encoding
 
 ### 💾 Save All (Today)
 - Saves all entries in one batch to Firebase
-- Fast and efficient
-- Prevents duplicate records in database
+- Prevents duplicates in database
+- Clears data after successful save
 
 ---
 
-## 🔄 Auto-Save Protection
-
-- Entries are automatically saved in **localStorage**
-- Works when:
+## 🔄 Auto-Save & Recovery
+- Uses **localStorage**
+- Protects data when:
   - Page is refreshed
   - Browser is closed
-  - Internet disconnects
+  - Internet is lost
 
 ### 🔁 Auto Restore
-- Unsaved entries are restored when the user returns
+- Unsaved entries are restored automatically on reload
 
 ---
 
-## 🗑️ Data Controls
-- Delete saved entries
-- Undo last deletion
+## 🧹 Smart Reset After Save
+After saving:
+- Clears preview entries
+- Clears local storage
+- Resets input fields
+- Ready for next day encoding
 
 ---
 
-## 📊 Monthly Reporting
-- Auto-calculated totals per store
-- Aggregates:
-  - Total Apps
-  - Signed
-  - Rejected
-  - Cancelled
+## 🗑️ Data Management
+- Delete saved records
+- Undo last delete action
 
 ---
 
-## 📱 PWA Support
-- Installable web app
-- Fast loading via service worker
-- Basic offline support (UI cached)
+## 📊 Monthly Totals (Per Store)
+
+- Auto-updates in real-time
+- Groups data by:
+  - Month
+  - Store
+
+### ✔ Includes:
+- Total Apps
+- Signed
+- Rejected
+- Cancelled
+
+### ❌ Excludes:
+- Rest Day
+- Absent entries
+
+### ✔ Features:
+- Clean accumulation per month
+- Sorted output (Month → Store)
+- Updates automatically after each save
+
+---
+
+## 📱 Progressive Web App (PWA)
+
+- Installable on mobile/desktop
+- Works like a native app
+- Cached shell for fast loading
+- Network-first strategy for fresh data
 
 ---
 
 ## 🛠 Tech Stack
+
 - HTML / CSS / JavaScript
 - Firebase Firestore
 - Service Worker
-- LocalStorage (offline-safe queue)
+- LocalStorage
 
 ---
 
 ## ⚠️ Deployment Tips
 
-If updates don’t reflect:
-1. Hard refresh (Ctrl + Shift + R)
+If updates are not visible:
+
+1. Hard refresh:
+   - `Ctrl + Shift + R`
 2. Clear browser cache
-3. Unregister service worker (DevTools → Application tab)
-4. Ensure `CACHE_NAME` is updated in `sw.js`
+3. Unregister Service Worker:
+   - DevTools → Application → Service Workers
+4. Update `CACHE_NAME` in `sw.js`
 
 ---
 
 ## 📌 Version
 
-**v4 - Batch Save + Auto-Recovery System**
-- Save All (Today)
-- Local auto-save
-- No edit mode
-- Simplified workflow
+**v5 – Preview + Batch Save + Auto-Recovery + Clean Monthly Totals**
 
+Includes:
+- Preview table before saving
+- Local auto-save protection
+- Batch Firebase saving
+- Monthly totals filtering (working days only)
+- Full reset after save
 ---
 
 ## 📊 Monthly Totals Logic
