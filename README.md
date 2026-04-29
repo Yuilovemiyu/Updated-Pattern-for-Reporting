@@ -1,32 +1,23 @@
-# HC/PG SA Monthly Report System
+# 📊 HC/PG SA Monthly Report Web App
 
-## FEATURES
-- Daily entry encoding
-- Edit & delete before saving
-- Batch Save All system
-- Previous data viewer
-- Monthly totals auto-recalculated
-- Real-time date update
-- Auto form reset
+A real-time reporting system built with Firebase Firestore for tracking store performance.
 
 ---
 
-## DATA LOGIC
-- `reports` = raw daily entries
-- `monthly_totals` = fully recalculated from reports
+## 🚀 Features
 
-No manual editing allowed on monthly totals.
-
----
-
-## SYSTEM BEHAVIOR
-- Add entries → preview list
-- Save All → batch upload
-- After save → rebuild monthly totals
-- View history anytime
+- ✅ Add daily store entries
+- ✏️ Edit existing records
+- 🗑️ Delete entries
+- 📊 Automatic monthly totals
+- ⚡ Real-time updates (no refresh needed)
+- 📱 Installable as a PWA (Progressive Web App)
+- 🔄 Syncs across multiple users/devices
 
 ---
 
-## PWA
-- Installable app
-- Offline UI caching (service worker)
+## 🧠 How It Works
+
+### Data Structure
+
+Each report is saved as:
