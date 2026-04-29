@@ -6,7 +6,6 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
     body { font-family: Arial; padding: 15px; }
@@ -14,6 +13,7 @@
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     th, td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 12px; }
     .edit-btn { background: #007bff; color: white; border: none; padding: 4px 6px; cursor: pointer; }
+    .delete-btn { background: red; color: white; border: none; padding: 4px 6px; cursor: pointer; }
   </style>
 </head>
 
@@ -37,15 +37,13 @@
 
 <button onclick="addEntry()">➕ Add Entry</button>
 <button onclick="saveAllToday()">💾 Save All</button>
-<button onclick="updateEntry()">💾 Save Update</button>
+<button onclick="updateEntry()">💾 Update</button>
 
 <h3>📦 Preview</h3>
 <table id="previewTable"></table>
 
 <h3>📅 Daily Report</h3>
 <input type="date" id="filterDate">
-<button onclick="loadDayReport()">🔍 Load Day</button>
-
 <table id="dayReportTable"></table>
 
 <h3>📊 Monthly Totals</h3>
@@ -53,7 +51,7 @@
 
 <script>
 
-// FIREBASE
+// 🔥 FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyBoPZ6nioxI_fzVrdLSh-pQ_EEqSdPOnrY",
   authDomain: "pattern-for-reporting.firebaseapp.com",
@@ -79,35 +77,43 @@ filterDate.value = date.value;
 
 let todayEntries = [];
 let editingId = null;
+let unsubscribeDay = null;
+let unsubscribeMonthly = null;
 
-// NON APPS
+// NON APPS LOGIC
 total.addEventListener("input",()=>{
   nonapps.disabled = Number(total.value) > 1;
 });
 
-// RESET
+// RESET FORM
 function reset(){
   store.selectedIndex = 0;
   total.value = signed.value = rejected.value = cancelled.value = "";
   nonapps.value = "";
 }
 
-// ADD ENTRY
+// SAFE NUMBER
+function safeNum(val){
+  const n = parseFloat(val);
+  return isNaN(n) ? 0 : n;
+}
+
+// ADD ENTRY (PREVIEW ONLY)
 function addEntry(){
   todayEntries.push({
     date: date.value,
     store: store.value,
-    total: Number(total.value||0),
-    signed: Number(signed.value||0),
-    rejected: Number(rejected.value||0),
-    cancelled: Number(cancelled.value||0),
+    total: safeNum(total.value),
+    signed: safeNum(signed.value),
+    rejected: safeNum(rejected.value),
+    cancelled: safeNum(cancelled.value),
     nonapps: nonapps.value || "-"
   });
   renderPreview();
   reset();
 }
 
-// PREVIEW
+// PREVIEW TABLE
 function renderPreview(){
   previewTable.innerHTML = `
   <tr><th>Date</th><th>Store</th><th>Total</th><th>Signed</th>
@@ -123,34 +129,31 @@ function renderPreview(){
   });
 }
 
-// SAVE (FIXED: NO DUPLICATES)
+// SAVE ALL
 async function saveAllToday(){
   if(todayEntries.length===0) return alert("No data");
 
   const batch = db.batch();
 
   todayEntries.forEach(e=>{
-    const docId = e.date + "_" + e.store; // ✅ KEY FIX
-    batch.set(db.collection("reports").doc(docId), e);
+    const id = `${e.date}_${e.store}`;
+    batch.set(db.collection("reports").doc(id), e);
   });
 
   await batch.commit();
-
   todayEntries=[];
   renderPreview();
 
   await recomputeMonthly();
-  loadMonthlyTotals();
 
   alert("Saved!");
 }
 
-// RECOMPUTE MONTHLY (CLEAN)
+// RECOMPUTE MONTHLY
 async function recomputeMonthly(){
 
   const reports = await db.collection("reports").get();
 
-  // CLEAR OLD
   const old = await db.collection("monthly_totals").get();
   const delBatch = db.batch();
   old.forEach(doc=>delBatch.delete(doc.ref));
@@ -160,33 +163,75 @@ async function recomputeMonthly(){
 
   reports.forEach(doc=>{
     const d=doc.data();
-    const month=d.date?.substring(0,7);
-    if(!month) return;
 
-    const key=month+"_"+d.store;
+    if(!d.date || d.date.length<7) return;
+
+    const month=d.date.substring(0,7);
+    const key=`${month}_${d.store}`;
 
     if(!map[key]){
       map[key]={month,store:d.store,total:0,signed:0,rejected:0,cancelled:0};
     }
 
-    map[key].total += Number(d.total||0);
-    map[key].signed += Number(d.signed||0);
-    map[key].rejected += Number(d.rejected||0);
-    map[key].cancelled += Number(d.cancelled||0);
+    map[key].total += safeNum(d.total);
+    map[key].signed += safeNum(d.signed);
+    map[key].rejected += safeNum(d.rejected);
+    map[key].cancelled += safeNum(d.cancelled);
   });
 
   const batch=db.batch();
   Object.values(map).forEach(t=>{
-    batch.set(db.collection("monthly_totals").doc(t.month+"_"+t.store), t);
+    batch.set(db.collection("monthly_totals").doc(`${t.month}_${t.store}`), t);
   });
 
   await batch.commit();
 }
 
-// LOAD MONTHLY (FIXED NUMBERS)
+// REAL-TIME DAILY
+function loadDayReport(){
+
+  if(unsubscribeDay) unsubscribeDay();
+
+  unsubscribeDay = db.collection("reports")
+  .where("date","==",filterDate.value)
+  .onSnapshot(snap=>{
+
+    dayReportTable.innerHTML = `
+    <tr>
+      <th>Date</th><th>Store</th><th>Total</th>
+      <th>Signed</th><th>Rejected</th>
+      <th>Cancelled</th><th>Non Apps</th><th>Action</th>
+    </tr>`;
+
+    snap.forEach(doc=>{
+      const d = doc.data();
+      const id = doc.id;
+
+      dayReportTable.innerHTML += `
+      <tr>
+        <td>${d.date}</td>
+        <td>${d.store}</td>
+        <td>${d.total}</td>
+        <td>${d.signed}</td>
+        <td>${d.rejected}</td>
+        <td>${d.cancelled}</td>
+        <td>${d.nonapps}</td>
+        <td>
+          <button class="edit-btn" onclick="editEntry('${id}')">✏️</button>
+          <button class="delete-btn" onclick="deleteEntry('${id}')">🗑️</button>
+        </td>
+      </tr>`;
+    });
+  });
+}
+
+// REAL-TIME MONTHLY
 function loadMonthlyTotals(){
 
-  db.collection("monthly_totals").get().then(snapshot=>{
+  if(unsubscribeMonthly) unsubscribeMonthly();
+
+  unsubscribeMonthly = db.collection("monthly_totals")
+  .onSnapshot(snapshot=>{
 
     monthlyTotals.innerHTML = `
     <tr><th>Month</th><th>Store</th><th>Total</th>
@@ -210,10 +255,10 @@ function loadMonthlyTotals(){
       </tr>`;
 
       grouped[month].forEach(d=>{
-        t+=Number(d.total||0);
-        s+=Number(d.signed||0);
-        r+=Number(d.rejected||0);
-        c+=Number(d.cancelled||0);
+        t+=d.total||0;
+        s+=d.signed||0;
+        r+=d.rejected||0;
+        c+=d.cancelled||0;
 
         monthlyTotals.innerHTML += `
         <tr>
@@ -232,55 +277,62 @@ function loadMonthlyTotals(){
   });
 }
 
-// DAILY (FIXED SNAPSHOT BUG)
-function loadDayReport(){
+// EDIT
+function editEntry(id){
+  db.collection("reports").doc(id).get().then(doc=>{
+    const d = doc.data();
 
-  db.collection("reports")
-  .where("date","==",filterDate.value)
-  .get()
-  .then(snap=>{
+    date.value = d.date;
+    store.value = d.store;
+    total.value = d.total;
+    signed.value = d.signed;
+    rejected.value = d.rejected;
+    cancelled.value = d.cancelled;
+    nonapps.value = d.nonapps;
 
-    dayReportTable.innerHTML = `
-    <tr><th>Date</th><th>Store</th><th>Total</th>
-    <th>Signed</th><th>Rejected</th><th>Cancelled</th><th>Non Apps</th></tr>`;
-
-    snap.forEach(doc=>{
-      const d=doc.data();
-
-      dayReportTable.innerHTML += `
-      <tr>
-        <td>${d.date}</td><td>${d.store}</td>
-        <td>${d.total}</td><td>${d.signed}</td>
-        <td>${d.rejected}</td><td>${d.cancelled}</td>
-        <td>${d.nonapps}</td>
-      </tr>`;
-    });
+    editingId = id;
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
 
 // UPDATE
 async function updateEntry(){
+  if(!editingId) return alert("Select record first");
 
-  const docId = date.value + "_" + store.value;
-
-  await db.collection("reports").doc(docId).set({
+  await db.collection("reports").doc(editingId).set({
     date: date.value,
     store: store.value,
-    total: Number(total.value),
-    signed: Number(signed.value),
-    rejected: Number(rejected.value),
-    cancelled: Number(cancelled.value),
-    nonapps: nonapps.value
+    total: safeNum(total.value),
+    signed: safeNum(signed.value),
+    rejected: safeNum(rejected.value),
+    cancelled: safeNum(cancelled.value),
+    nonapps: nonapps.value || "-"
   });
 
-  await recomputeMonthly();
-  loadMonthlyTotals();
+  editingId=null;
 
-  alert("Updated");
+  await recomputeMonthly();
+  reset();
+
+  alert("Updated!");
 }
 
-// INIT
+// DELETE
+async function deleteEntry(id){
+  if(!confirm("Delete this entry?")) return;
+
+  await db.collection("reports").doc(id).delete();
+
+  await recomputeMonthly();
+
+  alert("Deleted!");
+}
+
+// AUTO LOAD
+filterDate.addEventListener("change", loadDayReport);
+
 window.onload = ()=>{
+  loadDayReport();
   loadMonthlyTotals();
 };
 
