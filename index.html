@@ -72,6 +72,13 @@
 
 <div id="userInfo"></div>
 
+<!-- 🔥 ADMIN TOOL (OPTION 2) -->
+<div id="adminPanel" style="display:none; margin:10px 0;">
+  <h3>🛠 Admin Tools</h3>
+  <input id="adminEmail" placeholder="User email to promote">
+  <button onclick="makeAdmin()">Make Admin</button>
+</div>
+
 <button onclick="logout()">Logout</button>
 
 <input type="date" id="date">
@@ -150,6 +157,11 @@ auth.onAuthStateChanged(async user=>{
       <b>Rest Day:</b> ${currentUserData.restDay || "N/A"}
     `;
 
+    // 🔥 SHOW ADMIN PANEL ONLY IF ADMIN
+    if(currentUserData.admin){
+      adminPanel.style.display = "block";
+    }
+
     authBox.style.display="none";
     app.style.display="block";
 
@@ -193,14 +205,41 @@ function login(){
 function logout(){ auth.signOut(); }
 
 /////////////////////////////
+// 🔥 OPTION 2: MAKE ADMIN
+/////////////////////////////
+async function makeAdmin(){
+
+  if(!currentUserData?.admin){
+    return alert("No permission");
+  }
+
+  const emailToPromote = adminEmail.value;
+
+  if(!emailToPromote){
+    return alert("Enter email");
+  }
+
+  const snap = await db.collection("users")
+    .where("email","==",emailToPromote)
+    .get();
+
+  if(snap.empty){
+    return alert("User not found");
+  }
+
+  snap.forEach(doc=>{
+    doc.ref.update({ admin: true });
+  });
+
+  alert("User promoted to admin");
+}
+
+/////////////////////////////
 // DATA
 /////////////////////////////
 let todayEntries=[];
 let editingId=null;
 
-/////////////////////////////
-// ADD ENTRY
-/////////////////////////////
 function addEntry(){
 
   todayEntries.push({
@@ -238,9 +277,6 @@ function renderPreview(){
   });
 }
 
-/////////////////////////////
-// SAVE
-/////////////////////////////
 async function saveAllToday(){
 
   const batch=db.batch();
@@ -257,9 +293,6 @@ async function saveAllToday(){
   await recomputeMonthly();
 }
 
-/////////////////////////////
-// MONTHLY RECOMPUTE (AUTO FIX)
-/////////////////////////////
 async function recomputeMonthly(){
 
   const snap=await db.collection("reports").get();
@@ -291,9 +324,6 @@ async function recomputeMonthly(){
   await batch.commit();
 }
 
-/////////////////////////////
-// DAILY REPORT (WITH EDIT BUTTON FIX)
-/////////////////////////////
 function loadDayReport(){
 
   const day=filterDate.value;
@@ -312,7 +342,6 @@ function loadDayReport(){
       <th>Rejected</th>
       <th>Cancelled</th>
       <th>Reported By</th>
-      <th>Action</th>
     </tr>`;
 
     snap.forEach(doc=>{
@@ -327,63 +356,28 @@ function loadDayReport(){
         <td>${d.rejected}</td>
         <td>${d.cancelled}</td>
         <td>${d.reportedBy}</td>
-        <td>
-          <button onclick="editEntry('${doc.id}', '${encodeURIComponent(JSON.stringify(d))}')">
-            Edit
-          </button>
-        </td>
       </tr>`;
     });
 
   });
 }
 
-/////////////////////////////
-// EDIT
-/////////////////////////////
-function editEntry(id,data){
+function updateEntry(){
 
-  data = JSON.parse(decodeURIComponent(data));
-
-  editingId=id;
-
-  date.value=data.date;
-  store.value=data.store;
-  total.value=data.total;
-  signed.value=data.signed;
-  rejected.value=data.rejected;
-  cancelled.value=data.cancelled;
-  nonapps.value=data.nonapps;
-}
-
-/////////////////////////////
-// UPDATE (FIXED + REBUILD MONTHLY)
-/////////////////////////////
-async function updateEntry(){
-
-  if(!editingId) return alert("No selected entry");
-
-  await db.collection("reports").doc(editingId).update({
+  db.collection("reports").doc(editingId).update({
     date:date.value,
     store:store.value,
     total:+total.value,
     signed:+signed.value,
     rejected:+rejected.value,
     cancelled:+cancelled.value,
-    nonapps:nonapps.value,
-    reportedBy: currentUserData?.store
+    nonapps:nonapps.value
+  }).then(()=>{
+    recomputeMonthly();
+    alert("Updated");
   });
-
-  editingId=null;
-
-  await recomputeMonthly();
-
-  alert("Updated + Monthly refreshed");
 }
 
-/////////////////////////////
-// INIT
-/////////////////////////////
 window.onload=()=>{
   date.value=new Date().toISOString().split("T")[0];
   filterDate.value=date.value;
