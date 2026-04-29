@@ -224,23 +224,36 @@ function login(){
 
 function logout(){ auth.signOut(); }
 
+function resetInputs(){
+  store.value = "";
+  total.value = "";
+  signed.value = "";
+  rejected.value = "";
+  cancelled.value = "";
+  nonapps.value = "";
+}
+
 function addEntry(){
   todayEntries.push({
-    date:date.value,
-    store:store.value,
-    total:+total.value||0,
-    signed:+signed.value||0,
-    rejected:+rejected.value||0,
-    cancelled:+cancelled.value||0,
-    nonapps:nonapps.value||"-",
+    date: date.value,
+    store: store.value,
+    total: +total.value || 0,
+    signed: +signed.value || 0,
+    rejected: +rejected.value || 0,
+    cancelled: +cancelled.value || 0,
+    nonapps: nonapps.value || "-",
     reportedBy: currentUserData?.store || "Unknown"
   });
 
   renderPreview();
+
+  // 🔥 RESET FORM AFTER ADD
+  resetInputs();
 }
 
+
 function renderPreview(){
-  previewTable.innerHTML = `<tr><th>Date</th><th>Store</th><th>Total</th><th>Reported By</th></tr>`;
+  previewTable.innerHTML = `<tr><th>Date</th><th>Store</th><th>Total</th><th>Signed</th><th>Rejected</th><th>Cancelled</th><th>Non Apps</th><th>Reported By</th></tr>`;
 
   todayEntries.forEach(e=>{
     previewTable.innerHTML += `
@@ -248,6 +261,10 @@ function renderPreview(){
       <td>${e.date}</td>
       <td>${e.store}</td>
       <td>${e.total}</td>
+      <td>${e.signed}</td>
+      <td>${e.rejected}</td>
+      <td>${e.cancelled}</td>
+      <td>${e.nonapps}</td>
       <td>${e.reportedBy}</td>
     </tr>`;
   });
