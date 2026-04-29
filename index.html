@@ -72,7 +72,6 @@
 
 <div id="userInfo"></div>
 
-<!-- 🔥 ADMIN TOOL (OPTION 2) -->
 <div id="adminPanel" style="display:none; margin:10px 0;">
   <h3>🛠 Admin Tools</h3>
   <input id="adminEmail" placeholder="User email to promote">
@@ -125,9 +124,6 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/////////////////////////////
-// STORES
-/////////////////////////////
 const stores = [
   "Brookside","Manggahan","Bacoor","Dasmarinas","Gentri Jr.",
   "Tanza","Kawit","Tanza Paradahan","GMA","Tagaytay",
@@ -135,14 +131,14 @@ const stores = [
   "Binan Bayan","Crossing East","Anabu (Yssabelle)","Anabu (Ian)","Rosario"
 ];
 
+const signupStore = document.getElementById("signupStore");
+const store = document.getElementById("store");
+
 stores.forEach(s=>{
   signupStore.innerHTML += `<option value="${s}">${s}</option>`;
   store.innerHTML += `<option value="${s}">${s}</option>`;
 });
 
-/////////////////////////////
-// USER DATA
-/////////////////////////////
 let currentUserData = null;
 
 auth.onAuthStateChanged(async user=>{
@@ -151,97 +147,64 @@ auth.onAuthStateChanged(async user=>{
     const snap = await db.collection("users").doc(user.uid).get();
     currentUserData = snap.data() || {};
 
-    userInfo.innerHTML = `
-      <b>User:</b> ${currentUserData.username || user.email} |
-      <b>Store:</b> ${currentUserData.store || "N/A"} |
-      <b>Rest Day:</b> ${currentUserData.restDay || "N/A"}
-    `;
+    document.getElementById("userInfo").innerHTML =
+      `<b>User:</b> ${currentUserData.username || user.email} |
+       <b>Store:</b> ${currentUserData.store || "N/A"} |
+       <b>Admin:</b> ${currentUserData.admin ? "YES" : "NO"}`;
 
-    // 🔥 SHOW ADMIN PANEL ONLY IF ADMIN
-    if(currentUserData.admin){
-      adminPanel.style.display = "block";
-    }
+    document.getElementById("adminPanel").style.display =
+      currentUserData.admin ? "block" : "none";
 
-    authBox.style.display="none";
-    app.style.display="block";
+    document.getElementById("authBox").style.display="none";
+    document.getElementById("app").style.display="block";
 
-  } else {
-    authBox.style.display="block";
-    app.style.display="none";
+    loadMonthlyTotals(); // 🔥 FIX
+  }
+  else {
+    document.getElementById("authBox").style.display="block";
+    document.getElementById("app").style.display="none";
   }
 });
 
-/////////////////////////////
-// SIGNUP
-/////////////////////////////
 function signup(){
-
-  if(!signupStore.value || !restDay.value || !username.value){
-    alert("Fill all fields");
-    return;
-  }
-
   auth.createUserWithEmailAndPassword(email.value,password.value)
   .then(async u=>{
-
     await db.collection("users").doc(u.user.uid).set({
       username: username.value,
       email: email.value,
       store: signupStore.value,
       restDay: restDay.value,
-      admin: false
+      admin:false
     });
-
     alert("Signup success");
-  })
-  .catch(e=>alert(e.message));
+  });
 }
 
 function login(){
-  auth.signInWithEmailAndPassword(email.value,password.value)
-  .catch(e=>alert(e.message));
+  auth.signInWithEmailAndPassword(email.value,password.value);
 }
 
 function logout(){ auth.signOut(); }
 
-/////////////////////////////
-// 🔥 OPTION 2: MAKE ADMIN
-/////////////////////////////
 async function makeAdmin(){
 
-  if(!currentUserData?.admin){
-    return alert("No permission");
-  }
-
-  const emailToPromote = adminEmail.value;
-
-  if(!emailToPromote){
-    return alert("Enter email");
-  }
+  if(!currentUserData?.admin) return alert("No permission");
 
   const snap = await db.collection("users")
-    .where("email","==",emailToPromote)
+    .where("email","==",adminEmail.value)
     .get();
 
-  if(snap.empty){
-    return alert("User not found");
-  }
-
   snap.forEach(doc=>{
-    doc.ref.update({ admin: true });
+    doc.ref.update({ admin:true });
   });
 
-  alert("User promoted to admin");
+  alert("User promoted");
 }
 
-/////////////////////////////
-// DATA
-/////////////////////////////
 let todayEntries=[];
 let editingId=null;
 
 function addEntry(){
-
   todayEntries.push({
     date:date.value,
     store:store.value,
@@ -260,10 +223,7 @@ function renderPreview(){
 
   previewTable.innerHTML=`
   <tr>
-    <th>Date</th>
-    <th>Store</th>
-    <th>Total</th>
-    <th>Reported By</th>
+    <th>Date</th><th>Store</th><th>Total</th><th>Reported By</th>
   </tr>`;
 
   todayEntries.forEach(e=>{
@@ -291,6 +251,7 @@ async function saveAllToday(){
   renderPreview();
 
   await recomputeMonthly();
+  loadMonthlyTotals(); // 🔥 FIX
 }
 
 async function recomputeMonthly(){
@@ -324,57 +285,35 @@ async function recomputeMonthly(){
   await batch.commit();
 }
 
-function loadDayReport(){
+function loadMonthlyTotals(){
 
-  const day=filterDate.value;
-  dayTitle.innerText="Daily: "+day;
+  db.collection("monthly_totals").onSnapshot(snapshot=>{
 
-  db.collection("reports")
-  .where("date","==",day)
-  .onSnapshot(snap=>{
+    monthlyTotals.innerHTML=`
+      <tr>
+        <th>Month</th><th>Store</th>
+        <th>Total</th><th>Signed</th>
+        <th>Rejected</th><th>Cancelled</th>
+      </tr>`;
 
-    dayReportTable.innerHTML=`
-    <tr>
-      <th>Date</th>
-      <th>Store</th>
-      <th>Total</th>
-      <th>Signed</th>
-      <th>Rejected</th>
-      <th>Cancelled</th>
-      <th>Reported By</th>
-    </tr>`;
+    if(snapshot.empty){
+      monthlyTotals.innerHTML += `<tr><td colspan="6">No data</td></tr>`;
+      return;
+    }
 
-    snap.forEach(doc=>{
+    snapshot.forEach(doc=>{
       const d=doc.data();
 
-      dayReportTable.innerHTML+=`
+      monthlyTotals.innerHTML+=`
       <tr>
-        <td>${d.date}</td>
+        <td>${d.month}</td>
         <td>${d.store}</td>
         <td>${d.total}</td>
         <td>${d.signed}</td>
         <td>${d.rejected}</td>
         <td>${d.cancelled}</td>
-        <td>${d.reportedBy}</td>
       </tr>`;
     });
-
-  });
-}
-
-function updateEntry(){
-
-  db.collection("reports").doc(editingId).update({
-    date:date.value,
-    store:store.value,
-    total:+total.value,
-    signed:+signed.value,
-    rejected:+rejected.value,
-    cancelled:+cancelled.value,
-    nonapps:nonapps.value
-  }).then(()=>{
-    recomputeMonthly();
-    alert("Updated");
   });
 }
 
