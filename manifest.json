@@ -1,10 +1,11 @@
 {
-  "name": "HC/PG SA Report System",
+  "name": "HC/PG SA Monthly Report",
   "short_name": "SA Report",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#005bac",
+  "theme_color": "#007bff",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
