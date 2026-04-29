@@ -1,38 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>HC/PG SA Monthly Report</title>
+  <title>HC/PG SA Report System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link rel="manifest" href="manifest.json">
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <style>
     body { font-family: Arial; padding: 15px; }
-    input, select, button { margin: 5px; padding: 8px; width: 100%; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 12px; }
-    .edit-btn { background:#007bff; color:white; border:none; padding:4px; }
-    .delete-btn { background:red; color:white; border:none; padding:4px; }
+    input, select, button { width: 100%; padding: 8px; margin: 5px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #000; font-size: 12px; text-align: center; padding: 6px; }
   </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
+<!-- AUTH -->
 <div id="authBox">
-  <h3>🔐 Login</h3>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
+  <h3>Login</h3>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
 
   <button onclick="login()">Login</button>
   <button onclick="signup()">Sign Up</button>
 
   <div id="profileSetup" style="display:none;">
-    <h4>👤 Setup Profile</h4>
+    <h4>Setup Profile</h4>
 
     <select id="userStore"></select>
 
@@ -54,19 +52,18 @@
 <!-- APP -->
 <div id="app" style="display:none;">
 
-<button onclick="logout()">🚪 Logout</button>
+<button onclick="logout()">Logout</button>
 
-<h2>📊 Report System</h2>
+<h2>Report System</h2>
 
 <input type="date" id="date">
-<input type="date" id="filterDate">
 
 <select id="store"></select>
 
-<input type="number" id="total" placeholder="Total">
-<input type="number" id="signed" placeholder="Signed">
-<input type="number" id="rejected" placeholder="Rejected">
-<input type="number" id="cancelled" placeholder="Cancelled">
+<input id="total" type="number" placeholder="Total">
+<input id="signed" type="number" placeholder="Signed">
+<input id="rejected" type="number" placeholder="Rejected">
+<input id="cancelled" type="number" placeholder="Cancelled">
 
 <select id="nonapps">
   <option value="">Non Apps</option>
@@ -74,18 +71,10 @@
   <option>No</option>
 </select>
 
-<button onclick="addEntry()">➕ Add</button>
-<button onclick="saveAllToday()">💾 Save</button>
-<button onclick="updateEntry()">✏️ Update</button>
+<button onclick="addEntry()">Add</button>
+<button onclick="saveAll()">Save</button>
 
-<h3>Preview</h3>
-<table id="previewTable"></table>
-
-<h3>Daily Report</h3>
-<table id="dayReportTable"></table>
-
-<h3>Monthly Totals</h3>
-<table id="monthlyTotals"></table>
+<table id="table"></table>
 
 </div>
 
@@ -120,23 +109,22 @@ stores.forEach(s=>{
 /////////////////////////////
 let profile=null;
 let isAdmin=false;
-let editingId=null;
-let todayEntries=[];
-let unsubDay=null;
-let unsubMonth=null;
+let temp=[];
 
-const safe=v=>isNaN(parseFloat(v))?0:parseFloat(v);
+const n=v=>isNaN(parseFloat(v))?0:parseFloat(v);
 
 /////////////////////////////
-// AUTH
+// LOGIN
 /////////////////////////////
 function login(){
-  auth.signInWithEmailAndPassword(email.value,password.value);
+  auth.signInWithEmailAndPassword(email.value,password.value)
+  .catch(e=>alert(e.message));
 }
 
 function signup(){
   auth.createUserWithEmailAndPassword(email.value,password.value)
-  .then(()=>profileSetup.style.display="block");
+  .then(()=>profileSetup.style.display="block")
+  .catch(e=>alert(e.message));
 }
 
 function logout(){
@@ -144,25 +132,22 @@ function logout(){
 }
 
 /////////////////////////////
-// SAVE PROFILE (NO ROLE HERE - SECURE SYSTEM)
+// SAVE PROFILE (NO ROLE HERE - SECURE)
 /////////////////////////////
 async function saveProfile(){
-
   const user=auth.currentUser;
-
-  const rest=[...restDays.selectedOptions].map(o=>o.value);
 
   await db.collection("users").doc(user.uid).set({
     email:user.email,
     store:userStore.value,
-    restDays:rest
+    restDays:[...restDays.selectedOptions].map(o=>o.value)
   });
 
   profileSetup.style.display="none";
 }
 
 /////////////////////////////
-// AUTH STATE + ADMIN CHECK (SECURE)
+// AUTH STATE + ADMIN CHECK
 /////////////////////////////
 auth.onAuthStateChanged(async user=>{
   if(!user){
@@ -188,167 +173,52 @@ auth.onAuthStateChanged(async user=>{
 
   authBox.style.display="none";
   app.style.display="block";
-
-  loadDay();
-  loadMonth();
 });
 
 /////////////////////////////
 // ADD ENTRY
 /////////////////////////////
 function addEntry(){
-  todayEntries.push({
+  temp.push({
     date:date.value,
     store:profile.store,
-    total:safe(total.value),
-    signed:safe(signed.value),
-    rejected:safe(rejected.value),
-    cancelled:safe(cancelled.value),
-    nonapps:nonapps.value||"-",
-    user:auth.currentUser.email
+    total:n(total.value),
+    signed:n(signed.value),
+    rejected:n(rejected.value),
+    cancelled:n(cancelled.value),
+    nonapps:nonapps.value
   });
 
   render();
 }
 
 function render(){
-  previewTable.innerHTML="<tr><th>Date</th><th>Store</th><th>Total</th></tr>";
-  todayEntries.forEach(e=>{
-    previewTable.innerHTML+=`
-    <tr><td>${e.date}</td><td>${e.store}</td><td>${e.total}</td></tr>`;
+  table.innerHTML="<tr><th>Date</th><th>Store</th><th>Total</th></tr>";
+
+  temp.forEach(e=>{
+    table.innerHTML+=`<tr>
+      <td>${e.date}</td>
+      <td>${e.store}</td>
+      <td>${e.total}</td>
+    </tr>`;
   });
 }
 
 /////////////////////////////
-// SAVE ALL
+// SAVE
 /////////////////////////////
-async function saveAllToday(){
-
+async function saveAll(){
   const batch=db.batch();
 
-  todayEntries.forEach(e=>{
-    const id=`${e.date}_${e.store}`;
+  temp.forEach(e=>{
+    const id=e.date+"_"+e.store;
     batch.set(db.collection("reports").doc(id),e);
   });
 
   await batch.commit();
-
-  todayEntries=[];
+  temp=[];
   render();
-  recompute();
 }
-
-/////////////////////////////
-// UPDATE
-/////////////////////////////
-async function updateEntry(){
-
-  if(!editingId) return;
-
-  await db.collection("reports").doc(editingId).set({
-    date:date.value,
-    store:profile.store,
-    total:safe(total.value),
-    signed:safe(signed.value),
-    rejected:safe(rejected.value),
-    cancelled:safe(cancelled.value),
-    nonapps:nonapps.value
-  });
-
-  editingId=null;
-  recompute();
-}
-
-/////////////////////////////
-// DELETE (ADMIN ONLY UI CONTROL)
-/////////////////////////////
-async function del(id){
-  if(!isAdmin) return alert("Admin only");
-  await db.collection("reports").doc(id).delete();
-  recompute();
-}
-
-/////////////////////////////
-// REALTIME DAILY
-/////////////////////////////
-function loadDay(){
-
-  if(unsubDay) unsubDay();
-
-  let q=db.collection("reports")
-  .where("date","==",filterDate.value);
-
-  if(!isAdmin){
-    q=q.where("store","==",profile.store);
-  }
-
-  unsubDay=q.onSnapshot(s=>{
-    dayReportTable.innerHTML="";
-
-    s.forEach(d=>{
-      const x=d.data();
-
-      dayReportTable.innerHTML+=`
-      <tr>
-        <td>${x.store}</td>
-        <td>${x.total}</td>
-        <td>${isAdmin ? `<button onclick="del('${d.id}')">X</button>` : ""}</td>
-      </tr>`;
-    });
-  });
-}
-
-/////////////////////////////
-// MONTHLY REALTIME
-/////////////////////////////
-function loadMonth(){
-
-  if(unsubMonth) unsubMonth();
-
-  unsubMonth=db.collection("monthly_totals")
-  .onSnapshot(s=>{
-    monthlyTotals.innerHTML="";
-
-    s.forEach(d=>{
-      const x=d.data();
-
-      monthlyTotals.innerHTML+=`
-      <tr><td>${x.month}</td><td>${x.store}</td><td>${x.total}</td></tr>`;
-    });
-  });
-}
-
-/////////////////////////////
-// RECOMPUTE MONTHLY
-/////////////////////////////
-async function recompute(){
-
-  const snap=await db.collection("reports").get();
-  const map={};
-
-  snap.forEach(d=>{
-    const x=d.data();
-    const m=x.date?.slice(0,7);
-    const k=m+"_"+x.store;
-
-    if(!map[k]) map[k]={month:m,store:x.store,total:0};
-
-    map[k].total+=x.total||0;
-  });
-
-  const batch=db.batch();
-
-  Object.values(map).forEach(v=>{
-    batch.set(db.collection("monthly_totals").doc(v.month+"_"+v.store),v);
-  });
-
-  await batch.commit();
-}
-
-/////////////////////////////
-// INIT
-/////////////////////////////
-date.value=filterDate.value=new Date().toISOString().split("T")[0];
 
 </script>
 
