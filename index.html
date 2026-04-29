@@ -195,8 +195,14 @@ function login(){
 }
 
 function signup(){
-  auth.createUserWithEmailAndPassword(email.value,password.value)
-  .catch(e=>alert(e.message));
+  auth.createUserWithEmailAndPassword(email.value, password.value)
+  .then(user => {
+    alert("Signup successful: " + user.user.email);
+  })
+  .catch(err => {
+    console.error("SIGNUP ERROR:", err.code, err.message);
+    alert(err.code + " : " + err.message);
+  });
 }
 
 function logout(){
