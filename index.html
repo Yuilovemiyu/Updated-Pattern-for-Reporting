@@ -22,7 +22,7 @@
 
 <body>
 
-<!-- AUTH -->
+<!-- LOGIN -->
 <div id="authBox">
   <h3>🔐 Login</h3>
   <input type="email" id="email" placeholder="Email">
@@ -45,11 +45,6 @@
       <option>Thursday</option>
       <option>Friday</option>
       <option>Saturday</option>
-    </select>
-
-    <select id="userRole">
-      <option value="staff">Staff</option>
-      <option value="admin">Admin</option>
     </select>
 
     <button onclick="saveProfile()">Save Profile</button>
@@ -97,7 +92,7 @@
 <script>
 
 /////////////////////////////
-// 🔥 FIREBASE (INSERTED)
+// 🔥 FIREBASE (INSERTED EXACT)
 /////////////////////////////
 firebase.initializeApp({
   apiKey: "AIzaSyADXlQJcV5KJXTfYBK5qscv7gd88-XNlKo",
@@ -126,11 +121,11 @@ stores.forEach(s=>{
 let profile=null;
 let isAdmin=false;
 let editingId=null;
+let todayEntries=[];
 let unsubDay=null;
 let unsubMonth=null;
-let todayEntries=[];
 
-const safe = v => isNaN(parseFloat(v)) ? 0 : parseFloat(v);
+const safe=v=>isNaN(parseFloat(v))?0:parseFloat(v);
 
 /////////////////////////////
 // AUTH
@@ -149,25 +144,25 @@ function logout(){
 }
 
 /////////////////////////////
-// SAVE PROFILE
+// SAVE PROFILE (NO ROLE HERE - SECURE SYSTEM)
 /////////////////////////////
 async function saveProfile(){
 
   const user=auth.currentUser;
+
   const rest=[...restDays.selectedOptions].map(o=>o.value);
 
   await db.collection("users").doc(user.uid).set({
     email:user.email,
     store:userStore.value,
-    restDays:rest,
-    role:userRole.value
+    restDays:rest
   });
 
   profileSetup.style.display="none";
 }
 
 /////////////////////////////
-// AUTH STATE
+// AUTH STATE + ADMIN CHECK (SECURE)
 /////////////////////////////
 auth.onAuthStateChanged(async user=>{
   if(!user){
@@ -176,18 +171,20 @@ auth.onAuthStateChanged(async user=>{
     return;
   }
 
-  const doc=await db.collection("users").doc(user.uid).get();
+  const token = await user.getIdTokenResult();
+  isAdmin = token.claims.admin === true;
+
+  const doc = await db.collection("users").doc(user.uid).get();
 
   if(!doc.exists){
     profileSetup.style.display="block";
     return;
   }
 
-  profile=doc.data();
-  isAdmin=profile.role==="admin";
+  profile = doc.data();
 
-  store.value=profile.store;
-  store.disabled=!isAdmin;
+  store.value = profile.store;
+  store.disabled = !isAdmin;
 
   authBox.style.display="none";
   app.style.display="block";
@@ -226,6 +223,7 @@ function render(){
 // SAVE ALL
 /////////////////////////////
 async function saveAllToday(){
+
   const batch=db.batch();
 
   todayEntries.forEach(e=>{
@@ -234,6 +232,7 @@ async function saveAllToday(){
   });
 
   await batch.commit();
+
   todayEntries=[];
   render();
   recompute();
@@ -243,6 +242,7 @@ async function saveAllToday(){
 // UPDATE
 /////////////////////////////
 async function updateEntry(){
+
   if(!editingId) return;
 
   await db.collection("reports").doc(editingId).set({
@@ -260,15 +260,16 @@ async function updateEntry(){
 }
 
 /////////////////////////////
-// DELETE
+// DELETE (ADMIN ONLY UI CONTROL)
 /////////////////////////////
 async function del(id){
+  if(!isAdmin) return alert("Admin only");
   await db.collection("reports").doc(id).delete();
   recompute();
 }
 
 /////////////////////////////
-// REALTIME DAILY (ADMIN LOGIC)
+// REALTIME DAILY
 /////////////////////////////
 function loadDay(){
 
@@ -291,9 +292,7 @@ function loadDay(){
       <tr>
         <td>${x.store}</td>
         <td>${x.total}</td>
-        <td>
-          ${isAdmin ? `<button onclick="del('${d.id}')">X</button>` : ""}
-        </td>
+        <td>${isAdmin ? `<button onclick="del('${d.id}')">X</button>` : ""}</td>
       </tr>`;
     });
   });
@@ -312,6 +311,7 @@ function loadMonth(){
 
     s.forEach(d=>{
       const x=d.data();
+
       monthlyTotals.innerHTML+=`
       <tr><td>${x.month}</td><td>${x.store}</td><td>${x.total}</td></tr>`;
     });
@@ -319,7 +319,7 @@ function loadMonth(){
 }
 
 /////////////////////////////
-// RECOMPUTE
+// RECOMPUTE MONTHLY
 /////////////////////////////
 async function recompute(){
 
