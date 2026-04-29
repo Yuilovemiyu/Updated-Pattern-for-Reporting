@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>HC/PG SA Report System</title>
+  <title>Report System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="manifest" href="manifest.json">
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -13,75 +11,35 @@
   <style>
     body { font-family: Arial; padding: 15px; }
     input, select, button { width: 100%; padding: 8px; margin: 5px 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #000; font-size: 12px; text-align: center; padding: 6px; }
   </style>
 </head>
 
 <body>
 
-<!-- AUTH -->
 <div id="authBox">
   <h3>Login</h3>
+
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
 
   <button onclick="login()">Login</button>
   <button onclick="signup()">Sign Up</button>
-
-  <div id="profileSetup" style="display:none;">
-    <h4>Setup Profile</h4>
-
-    <select id="userStore"></select>
-
-    <label>Rest Days</label>
-    <select id="restDays" multiple>
-      <option>Sunday</option>
-      <option>Monday</option>
-      <option>Tuesday</option>
-      <option>Wednesday</option>
-      <option>Thursday</option>
-      <option>Friday</option>
-      <option>Saturday</option>
-    </select>
-
-    <button onclick="saveProfile()">Save Profile</button>
-  </div>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none;">
+  <h2>Dashboard</h2>
 
-<button onclick="logout()">Logout</button>
+  <select id="store"></select>
 
-<h2>Report System</h2>
+  <p id="status"></p>
 
-<input type="date" id="date">
-
-<select id="store"></select>
-
-<input id="total" type="number" placeholder="Total">
-<input id="signed" type="number" placeholder="Signed">
-<input id="rejected" type="number" placeholder="Rejected">
-<input id="cancelled" type="number" placeholder="Cancelled">
-
-<select id="nonapps">
-  <option value="">Non Apps</option>
-  <option>Yes</option>
-  <option>No</option>
-</select>
-
-<button onclick="addEntry()">Add</button>
-<button onclick="saveAll()">Save</button>
-
-<table id="table"></table>
-
+  <button onclick="logout()">Logout</button>
 </div>
 
 <script>
 
 /////////////////////////////
-// 🔥 FIREBASE (INSERTED EXACT)
+// 🔥 FIREBASE (YOUR INSERTED CONFIG)
 /////////////////////////////
 firebase.initializeApp({
   apiKey: "AIzaSyADXlQJcV5KJXTfYBK5qscv7gd88-XNlKo",
@@ -89,42 +47,51 @@ firebase.initializeApp({
   projectId: "today-s-reporter-3dceb"
 });
 
-const db = firebase.firestore();
 const auth = firebase.auth();
+const db = firebase.firestore();
 
 /////////////////////////////
-// STORES
+// STORES (YOUR INSERTED LIST)
 /////////////////////////////
 const stores = ["Brookside","Manggahan","Bacoor","Dasmarinas","Gentri Jr.",
 "Tanza","Kawit","Tanza Paradahan","GMA","Tagaytay","Molino","Paliparan",
 "San Pedro","Pacita","Binan Bayan","Crossing East","Anabu (Yssabelle)","Anabu (Ian)","Rosario"];
 
-stores.forEach(s=>{
-  userStore.innerHTML += `<option>${s}</option>`;
-  store.innerHTML += `<option>${s}</option>`;
-});
+const storeSelect = document.getElementById("store");
+
+// FIX: wait for DOM before inserting
+window.onload = () => {
+  stores.forEach(s => {
+    let opt = document.createElement("option");
+    opt.value = s;
+    opt.text = s;
+    storeSelect.appendChild(opt);
+  });
+};
 
 /////////////////////////////
-// STATE
-/////////////////////////////
-let profile=null;
-let isAdmin=false;
-let temp=[];
-
-const n=v=>isNaN(parseFloat(v))?0:parseFloat(v);
-
-/////////////////////////////
-// LOGIN
+// LOGIN FIX (IMPORTANT)
 /////////////////////////////
 function login(){
-  auth.signInWithEmailAndPassword(email.value,password.value)
-  .catch(e=>alert(e.message));
+  auth.signInWithEmailAndPassword(email.value, password.value)
+    .then(user => {
+      console.log("Logged in:", user.user.email);
+    })
+    .catch(err => {
+      alert("Login failed: " + err.message);
+      console.error(err);
+    });
 }
 
 function signup(){
-  auth.createUserWithEmailAndPassword(email.value,password.value)
-  .then(()=>profileSetup.style.display="block")
-  .catch(e=>alert(e.message));
+  auth.createUserWithEmailAndPassword(email.value, password.value)
+    .then(user => {
+      console.log("Signed up:", user.user.email);
+    })
+    .catch(err => {
+      alert("Signup failed: " + err.message);
+      console.error(err);
+    });
 }
 
 function logout(){
@@ -132,93 +99,18 @@ function logout(){
 }
 
 /////////////////////////////
-// SAVE PROFILE (NO ROLE HERE - SECURE)
+// AUTH STATE LISTENER (FIXED)
 /////////////////////////////
-async function saveProfile(){
-  const user=auth.currentUser;
-
-  await db.collection("users").doc(user.uid).set({
-    email:user.email,
-    store:userStore.value,
-    restDays:[...restDays.selectedOptions].map(o=>o.value)
-  });
-
-  profileSetup.style.display="none";
-}
-
-/////////////////////////////
-// AUTH STATE + ADMIN CHECK
-/////////////////////////////
-auth.onAuthStateChanged(async user=>{
-  if(!user){
-    authBox.style.display="block";
-    app.style.display="none";
-    return;
+auth.onAuthStateChanged(user => {
+  if(user){
+    document.getElementById("authBox").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    status.innerText = "Logged in as: " + user.email;
+  } else {
+    document.getElementById("authBox").style.display = "block";
+    document.getElementById("app").style.display = "none";
   }
-
-  const token = await user.getIdTokenResult();
-  isAdmin = token.claims.admin === true;
-
-  const doc = await db.collection("users").doc(user.uid).get();
-
-  if(!doc.exists){
-    profileSetup.style.display="block";
-    return;
-  }
-
-  profile = doc.data();
-
-  store.value = profile.store;
-  store.disabled = !isAdmin;
-
-  authBox.style.display="none";
-  app.style.display="block";
 });
-
-/////////////////////////////
-// ADD ENTRY
-/////////////////////////////
-function addEntry(){
-  temp.push({
-    date:date.value,
-    store:profile.store,
-    total:n(total.value),
-    signed:n(signed.value),
-    rejected:n(rejected.value),
-    cancelled:n(cancelled.value),
-    nonapps:nonapps.value
-  });
-
-  render();
-}
-
-function render(){
-  table.innerHTML="<tr><th>Date</th><th>Store</th><th>Total</th></tr>";
-
-  temp.forEach(e=>{
-    table.innerHTML+=`<tr>
-      <td>${e.date}</td>
-      <td>${e.store}</td>
-      <td>${e.total}</td>
-    </tr>`;
-  });
-}
-
-/////////////////////////////
-// SAVE
-/////////////////////////////
-async function saveAll(){
-  const batch=db.batch();
-
-  temp.forEach(e=>{
-    const id=e.date+"_"+e.store;
-    batch.set(db.collection("reports").doc(id),e);
-  });
-
-  await batch.commit();
-  temp=[];
-  render();
-}
 
 </script>
 
