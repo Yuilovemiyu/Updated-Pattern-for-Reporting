@@ -1,41 +1,47 @@
 # 📊 HC/PG SA Monthly Report System
 
-A Firebase-powered reporting system for store performance tracking.
+A Firebase-based reporting system for daily store entries and automatic monthly totals.
 
 ---
 
-# 🚀 Features
+## 🚀 Features
 
-- 🔐 Email Login / Signup (Firebase Auth)
-- 🏪 Store selection per user
-- 📅 Daily reporting system
-- 📊 Monthly auto-calculated totals
-- 👤 Tracks who reported each entry
-- ⚡ Real-time updates (Firestore onSnapshot)
-- 💾 Edit & update reports
-- 📱 PWA installable (mobile/desktop)
-- 📴 Offline support (service worker)
-
----
-
-# 🔧 Setup Instructions
-
-## 1. Firebase Setup
-
-Enable in Firebase Console:
-
-- Authentication → Email/Password
-- Firestore Database → Start in production mode
+### 📌 Daily Reporting
+- Add store entries per day
+- Includes:
+  - Total Apps
+  - Signed
+  - Rejected
+  - Cancelled
+  - Non Apps
+- Tracks who reported using `reportedBy`
 
 ---
 
-## 2. Add Firebase Config
+### 📊 Monthly Totals (AUTO)
+- Automatically recalculates from all reports
+- Groups by:
+  - Month
+  - Store
+- Updates after:
+  - Add Entry
+  - Update Entry
+  - Save All
 
-Already included in code:
+---
 
-```js
-firebase.initializeApp({
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT"
-});
+### ✏️ Edit System
+- Edit any daily report entry
+- Changes automatically reflect in monthly totals
+
+---
+
+### 🛠 Admin System (OPTION 2)
+- Admin users can promote other users to admin
+- Only visible if `admin: true`
+
+---
+
+## 🔐 Firebase Structure
+
+### users collection
