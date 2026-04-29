@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Report System</title>
+  <title>HC/PG SA Monthly Report</title>
+
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -10,16 +11,20 @@
 
   <style>
     body { font-family: Arial; padding: 15px; }
-    input, select, button { width: 100%; padding: 8px; margin: 5px 0; }
+    input, select, button { width: 100%; margin: 5px 0; padding: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #000; padding: 6px; font-size: 12px; text-align: center; }
+
     #app { display:none; }
+    #authBox { max-width: 400px; margin:auto; }
   </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
+<!-- 🔐 LOGIN -->
 <div id="authBox">
-  <h3>Login</h3>
+  <h2>Login</h2>
 
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
@@ -28,26 +33,51 @@
   <button onclick="signup()">Sign Up</button>
 </div>
 
-<!-- APP -->
+<!-- 📊 APP (ONLY AFTER LOGIN) -->
 <div id="app">
 
-  <h2>Dashboard</h2>
+<h2>📊 HC/PG SA Monthly Report</h2>
 
-  <select id="store"></select>
+<button onclick="logout()">Logout</button>
 
-  <button onclick="logout()">Logout</button>
+<input type="date" id="date">
 
-  <p id="status"></p>
+<select id="store"></select>
+
+<input type="number" id="total" placeholder="Total Apps">
+<input type="number" id="signed" placeholder="Signed">
+<input type="number" id="rejected" placeholder="Rejected">
+<input type="number" id="cancelled" placeholder="Cancelled">
+
+<select id="nonapps" disabled>
+  <option value="">Non Apps</option>
+  <option value="Yes">Yes</option>
+  <option value="No">No</option>
+</select>
+
+<button onclick="addEntry()">➕ Add Entry</button>
+<button onclick="saveAllToday()">💾 Save All</button>
+<button onclick="updateEntry()">💾 Save Update</button>
+
+<h3>Preview</h3>
+<table id="previewTable"></table>
+
+<h3>Daily Report</h3>
+
+<input type="date" id="filterDate">
+<button onclick="loadDayReport()">🔍 Load Day</button>
+
+<h3>Monthly Totals</h3>
+<table id="monthlyTotals"></table>
 
 </div>
 
 <script>
 
 /////////////////////////////
-// 🔥 FIREBASE (YOUR INSERTED CONFIG)
+// 🔥 FIREBASE (YOUR CONFIG)
 /////////////////////////////
-firebase.initializeApp({
-  apiKey: "AIzaSyADXlQJcV5KJXTfYBK5qscv7gd88-XNlKo",
+apiKey: "AIzaSyADXlQJcV5KJXTfYBK5qscv7gd88-XNlKo",
   authDomain: "today-s-reporter-3dceb.firebaseapp.com",
   projectId: "today-s-reporter-3dceb"
 });
@@ -56,75 +86,177 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 /////////////////////////////
-// STORES (YOUR INSERTED LIST)
+// STORES
 /////////////////////////////
-const stores = ["Brookside","Manggahan","Bacoor","Dasmarinas","Gentri Jr.",
-"Tanza","Kawit","Tanza Paradahan","GMA","Tagaytay","Molino","Paliparan",
-"San Pedro","Pacita","Binan Bayan","Crossing East","Anabu (Yssabelle)","Anabu (Ian)","Rosario"];
+const stores = [
+  "Brookside","Manggahan","Bacoor","Dasmarinas","Gentri Jr.",
+  "Tanza","Kawit","Tanza Paradahan","GMA","Tagaytay",
+  "Molino","Paliparan","San Pedro","Pacita",
+  "Binan Bayan","Crossing East","Anabu (Yssabelle)","Anabu (Ian)","Rosario"
+];
 
-const storeSelect = document.getElementById("store");
-
-/////////////////////////////
-// FIX: WAIT FOR DOM BEFORE INSERTING STORES
-/////////////////////////////
-window.onload = () => {
-  stores.forEach(s => {
-    const opt = document.createElement("option");
-    opt.value = s;
-    opt.text = s;
-    storeSelect.appendChild(opt);
-  });
-};
+stores.forEach(s=>{
+  let o=document.createElement("option");
+  o.value=s; o.text=s;
+  store.appendChild(o);
+});
 
 /////////////////////////////
-// LOGIN (FIXED + ERROR HANDLING)
+// AUTH SYSTEM
 /////////////////////////////
+
 function login(){
-  auth.signInWithEmailAndPassword(email.value, password.value)
-    .then(user => {
-      console.log("Logged in:", user.user.email);
-    })
-    .catch(err => {
-      alert("Login error: " + err.message);
-      console.error(err);
-    });
+  auth.signInWithEmailAndPassword(email.value,password.value)
+  .catch(e=>alert(e.message));
 }
 
-/////////////////////////////
-// SIGNUP (FIXED)
-/////////////////////////////
 function signup(){
-  auth.createUserWithEmailAndPassword(email.value, password.value)
-    .then(user => {
-      console.log("Signed up:", user.user.email);
-    })
-    .catch(err => {
-      alert("Signup error: " + err.message);
-      console.error(err);
-    });
+  auth.createUserWithEmailAndPassword(email.value,password.value)
+  .catch(e=>alert(e.message));
 }
 
-/////////////////////////////
-// LOGOUT
-/////////////////////////////
 function logout(){
   auth.signOut();
 }
 
-/////////////////////////////
-// AUTH STATE (FIXED UI SWITCH)
-/////////////////////////////
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(user=>{
   if(user){
-    document.getElementById("authBox").style.display = "none";
-    document.getElementById("app").style.display = "block";
-
-    status.innerText = "Logged in as: " + user.email;
+    authBox.style.display="none";
+    app.style.display="block";
   } else {
-    document.getElementById("authBox").style.display = "block";
-    document.getElementById("app").style.display = "none";
+    authBox.style.display="block";
+    app.style.display="none";
   }
 });
+
+/////////////////////////////
+// NON APP LOGIC
+/////////////////////////////
+total.addEventListener("input",()=>{
+  nonapps.disabled = Number(total.value) > 1;
+});
+
+/////////////////////////////
+// RESET
+/////////////////////////////
+function reset(){
+  store.selectedIndex=0;
+  total.value="";
+  signed.value="";
+  rejected.value="";
+  cancelled.value="";
+  nonapps.value="";
+}
+
+/////////////////////////////
+// ADD ENTRY
+/////////////////////////////
+let todayEntries=[];
+let editingId=null;
+
+function addEntry(){
+  todayEntries.push({
+    date:date.value,
+    store:store.value,
+    total:Number(total.value||0),
+    signed:Number(signed.value||0),
+    rejected:Number(rejected.value||0),
+    cancelled:Number(cancelled.value||0),
+    nonapps:nonapps.value||"-"
+  });
+
+  renderPreview();
+  reset();
+}
+
+function renderPreview(){
+  previewTable.innerHTML="<tr><th>Date</th><th>Store</th><th>Total</th></tr>";
+
+  todayEntries.forEach(e=>{
+    previewTable.innerHTML+=`
+    <tr>
+      <td>${e.date}</td>
+      <td>${e.store}</td>
+      <td>${e.total}</td>
+    </tr>`;
+  });
+}
+
+/////////////////////////////
+// SAVE
+/////////////////////////////
+async function saveAllToday(){
+  const batch=db.batch();
+
+  todayEntries.forEach(e=>{
+    batch.set(db.collection("reports").doc(),e);
+  });
+
+  await batch.commit();
+  todayEntries=[];
+  renderPreview();
+  recomputeMonthly();
+}
+
+/////////////////////////////
+// MONTHLY (SAME LOGIC)
+/////////////////////////////
+async function recomputeMonthly(){
+
+  const snap=await db.collection("reports").get();
+  const map={};
+
+  snap.forEach(doc=>{
+    const d=doc.data();
+    const m=d.date?.slice(0,7);
+    const key=m+"_"+d.store;
+
+    if(!map[key]){
+      map[key]={month:m,store:d.store,total:0,signed:0,rejected:0,cancelled:0};
+    }
+
+    map[key].total+=d.total;
+    map[key].signed+=d.signed;
+    map[key].rejected+=d.rejected;
+    map[key].cancelled+=d.cancelled;
+  });
+
+  const batch=db.batch();
+
+  Object.values(map).forEach(t=>{
+    batch.set(db.collection("monthly_totals").doc(t.month+"_"+t.store),t);
+  });
+
+  await batch.commit();
+}
+
+/////////////////////////////
+// LOAD MONTHLY
+/////////////////////////////
+function loadMonthlyTotals(){
+  db.collection("monthly_totals").onSnapshot(snap=>{
+    monthlyTotals.innerHTML="<tr><th>Month</th><th>Store</th><th>Total</th></tr>";
+
+    snap.forEach(d=>{
+      const x=d.data();
+      monthlyTotals.innerHTML+=`
+      <tr>
+        <td>${x.month}</td>
+        <td>${x.store}</td>
+        <td>${x.total}</td>
+      </tr>`;
+    });
+  });
+}
+
+/////////////////////////////
+// INIT
+/////////////////////////////
+window.onload=()=>{
+  loadMonthlyTotals();
+  date.value=new Date().toISOString().split("T")[0];
+  filterDate.value=date.value;
+};
 
 </script>
 
