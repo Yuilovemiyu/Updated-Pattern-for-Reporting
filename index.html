@@ -223,7 +223,7 @@ function renderPreview(){
 
   previewTable.innerHTML=`
   <tr>
-    <th>Date</th><th>Store</th><th>Total</th><th>Reported By</th>
+    <th>Date</th><th>Store</th><th>Total</th><th>Signed</th><th>Rejected</th><th>Cancelled</th><th>Non Apps</th><th>Reported By</th>
   </tr>`;
 
   todayEntries.forEach(e=>{
@@ -232,6 +232,9 @@ function renderPreview(){
       <td>${e.date}</td>
       <td>${e.store}</td>
       <td>${e.total}</td>
+      <td>${e.signed}</td>
+      <td>${e.rejected}</td>
+      <td>${e.nonapps}</td>
       <td>${e.reportedBy}</td>
     </tr>`;
   });
@@ -287,39 +290,153 @@ async function recomputeMonthly(){
 
 function loadMonthlyTotals(){
 
-  db.collection("monthly_totals").onSnapshot(snapshot=>{
+  db.collection("monthly_totals")
+    .onSnapshot(snapshot=>{
 
-    monthlyTotals.innerHTML=`
-      <tr>
-        <th>Month</th><th>Store</th>
-        <th>Total</th><th>Signed</th>
-        <th>Rejected</th><th>Cancelled</th>
-      </tr>`;
+      monthlyTotals.innerHTML = `
+        <tr>
+          <th>Month</th><th>Store</th>
+          <th>Total</th><th>Signed</th>
+          <th>Rejected</th><th>Cancelled</th>
+        </tr>
+      `;
 
-    if(snapshot.empty){
-      monthlyTotals.innerHTML += `<tr><td colspan="6">No data</td></tr>`;
-      return;
-    }
+      if(snapshot.empty){
+        monthlyTotals.innerHTML += `<tr><td colspan="6">No data</td></tr>`;
+        return;
+      }
 
-    snapshot.forEach(doc=>{
-      const d=doc.data();
+      let grouped = {};
 
-      monthlyTotals.innerHTML+=`
-      <tr>
-        <td>${d.month}</td>
-        <td>${d.store}</td>
-        <td>${d.total}</td>
-        <td>${d.signed}</td>
-        <td>${d.rejected}</td>
-        <td>${d.cancelled}</td>
-      </tr>`;
+      snapshot.forEach(doc=>{
+        const d = doc.data();
+        if(!grouped[d.month]) grouped[d.month] = [];
+        grouped[d.month].push(d);
+      });
+
+      Object.keys(grouped).sort().forEach(month=>{
+
+        let t=0,s=0,r=0,c=0;
+
+        monthlyTotals.innerHTML += `
+          <tr style="background:#ddd;font-weight:bold">
+            <td colspan="6">${month}</td>
+          </tr>
+        `;
+
+        grouped[month].forEach(d=>{
+          t+=d.total; s+=d.signed; r+=d.rejected; c+=d.cancelled;
+
+          monthlyTotals.innerHTML += `
+            <tr>
+              <td>${d.month}</td>
+              <td>${d.store}</td>
+              <td>${d.total}</td>
+              <td>${d.signed}</td>
+              <td>${d.rejected}</td>
+              <td>${d.cancelled}</td>
+            </tr>
+          `;
+        });
+
+        monthlyTotals.innerHTML += `
+          <tr style="font-weight:bold;background:#f2f2f2">
+            <td colspan="2">${month} TOTAL</td>
+            <td>${t}</td>
+            <td>${s}</td>
+            <td>${r}</td>
+            <td>${c}</td>
+          </tr>
+        `;
+      });
+
     });
-  });
 }
 
-window.onload=()=>{
-  date.value=new Date().toISOString().split("T")[0];
-  filterDate.value=date.value;
+// ================= DAILY =================
+function loadDayReport(){
+
+  const day = filterDate.value;
+  dayTitle.innerText = "Daily: " + day;
+
+  db.collection("reports")
+    .where("date","==",day)
+    .onSnapshot(snap=>{
+
+      dayReportTable.innerHTML = `
+        <tr>
+          <th>Date</th><th>Store</th>
+          <th>Total</th><th>Signed</th>
+          <th>Rejected</th><th>Cancelled</th><th>Non Apps</th><th>Action</th>
+        </tr>
+      `;
+
+      snap.forEach(doc=>{
+        const d = doc.data();
+
+        dayReportTable.innerHTML += `
+          <tr>
+            <td>${d.date}</td>
+            <td>${d.store}</td>
+            <td>${d.total}</td>
+            <td>${d.signed}</td>
+            <td>${d.rejected}</td>
+            <td>${d.cancelled}</td>
+            <td>${d.nonapps}</td>
+            <td><button class="edit-btn" onclick='editEntry("${doc.id}", ${JSON.stringify(d)})'>Edit</button></td>
+          </tr>
+        `;
+      });
+    });
+}
+
+// ================= EDIT =================
+function editEntry(id,data){
+
+  if(typeof data === "string") data = JSON.parse(data);
+
+  date.value = data.date;
+  store.value = data.store;
+  total.value = data.total;
+  signed.value = data.signed;
+  rejected.value = data.rejected;
+  cancelled.value = data.cancelled;
+  nonapps.value = data.nonapps;
+
+  editingId = id;
+}
+
+// ================= UPDATE =================
+async function updateEntry(){
+
+  await db.collection("reports").doc(editingId).update({
+    date: date.value,
+    store: store.value,
+    total: Number(total.value),
+    signed: Number(signed.value),
+    rejected: Number(rejected.value),
+    cancelled: Number(cancelled.value),
+    nonapps: nonapps.value
+  });
+
+  editingId = null;
+  await recomputeMonthly();
+
+  alert("Updated");
+}
+
+// ================= BONUS =================
+function openBonus(){
+  bonusModal.style.display = "block";
+}
+
+function closeBonus(){
+  bonusModal.style.display = "none";
+}
+
+// ================= INIT LOAD =================
+window.onload = ()=>{
+  loadMonthlyTotals();
 };
 
 </script>
