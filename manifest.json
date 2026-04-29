@@ -1,11 +1,11 @@
 {
   "name": "HC/PG SA Monthly Report",
-  "short_name": "SA Report",
+  "short_name": "Monthly Report",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#005bac",
-  "description": "Daily and Monthly Reporting System for HC/PG SA Stores",
+  "theme_color": "#000000",
+  "description": "Daily reporting and monthly totals system for stores",
   "icons": [
     {
       "src": "icon-192.png",
