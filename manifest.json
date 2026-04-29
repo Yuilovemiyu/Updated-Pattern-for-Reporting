@@ -1,12 +1,21 @@
 {
-  "name": "Report System",
-  "short_name": "Reports",
-  "start_url": "index.html",
+  "name": "HC/PG SA Monthly Report",
+  "short_name": "SA Report",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#007bff",
+  "theme_color": "#005bac",
+  "description": "Daily and Monthly Reporting System for HC/PG SA Stores",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }
