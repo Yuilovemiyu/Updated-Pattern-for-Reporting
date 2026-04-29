@@ -42,6 +42,7 @@
 <div id="authBox">
   <h2>Login</h2>
 
+  <input id="username" placeholder="Username">
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
 
@@ -60,14 +61,16 @@
     <option>Sunday</option>
   </select>
 
-  <button onclick="login()">Login</button>
   <button onclick="signup()">Sign Up</button>
+  <button onclick="login()">Login</button>
 </div>
 
 <!-- APP -->
 <div id="app">
 
 <h2>📊 Monthly Report</h2>
+
+<div id="userInfo"></div>
 
 <button onclick="logout()">Logout</button>
 
@@ -106,7 +109,6 @@
 
 <script>
 
-// ================= FIREBASE =================
 firebase.initializeApp({
   apiKey: "AIzaSyADXlQJcV5KJXTfYBK5qscv7gd88-XNlKo",
   authDomain: "today-s-reporter-3dceb.firebaseapp.com",
@@ -116,7 +118,9 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ================= STORES =================
+/////////////////////////////
+// STORES
+/////////////////////////////
 const stores = [
   "Brookside","Manggahan","Bacoor","Dasmarinas","Gentri Jr.",
   "Tanza","Kawit","Tanza Paradahan","GMA","Tagaytay",
@@ -129,19 +133,51 @@ stores.forEach(s=>{
   store.innerHTML += `<option value="${s}">${s}</option>`;
 });
 
-// ================= AUTH =================
+/////////////////////////////
+// USER DATA
+/////////////////////////////
+let currentUserData = null;
+
+auth.onAuthStateChanged(async user=>{
+  if(user){
+
+    const snap = await db.collection("users").doc(user.uid).get();
+    currentUserData = snap.data() || {};
+
+    userInfo.innerHTML = `
+      <b>User:</b> ${currentUserData.username || user.email} |
+      <b>Store:</b> ${currentUserData.store || "N/A"} |
+      <b>Rest Day:</b> ${currentUserData.restDay || "N/A"}
+    `;
+
+    authBox.style.display="none";
+    app.style.display="block";
+
+  } else {
+    authBox.style.display="block";
+    app.style.display="none";
+  }
+});
+
+/////////////////////////////
+// SIGNUP
+/////////////////////////////
 function signup(){
-  if(!signupStore.value || !restDay.value){
-    alert("Select store + rest day");
+
+  if(!signupStore.value || !restDay.value || !username.value){
+    alert("Fill all fields");
     return;
   }
 
   auth.createUserWithEmailAndPassword(email.value,password.value)
   .then(async u=>{
+
     await db.collection("users").doc(u.user.uid).set({
+      username: username.value,
       email: email.value,
       store: signupStore.value,
-      restDay: restDay.value
+      restDay: restDay.value,
+      admin: false
     });
 
     alert("Signup success");
@@ -156,21 +192,15 @@ function login(){
 
 function logout(){ auth.signOut(); }
 
-auth.onAuthStateChanged(user=>{
-  if(user){
-    authBox.style.display="none";
-    app.style.display="block";
-  } else {
-    authBox.style.display="block";
-    app.style.display="none";
-  }
-});
-
-// ================= DATA =================
+/////////////////////////////
+// DATA
+/////////////////////////////
 let todayEntries=[];
 let editingId=null;
 
-// ================= ADD =================
+/////////////////////////////
+// ADD ENTRY
+/////////////////////////////
 function addEntry(){
 
   todayEntries.push({
@@ -181,27 +211,36 @@ function addEntry(){
     rejected:+rejected.value||0,
     cancelled:+cancelled.value||0,
     nonapps:nonapps.value||"-",
-    reportedBy: auth.currentUser.email
+    reportedBy: currentUserData?.store || "Unknown"
   });
 
   renderPreview();
 }
 
 function renderPreview(){
+
   previewTable.innerHTML=`
-  <tr><th>Date</th><th>Store</th><th>Total</th></tr>`;
+  <tr>
+    <th>Date</th>
+    <th>Store</th>
+    <th>Total</th>
+    <th>Reported By</th>
+  </tr>`;
 
   todayEntries.forEach(e=>{
-    previewTable.innerHTML += `
+    previewTable.innerHTML+=`
     <tr>
       <td>${e.date}</td>
       <td>${e.store}</td>
       <td>${e.total}</td>
+      <td>${e.reportedBy}</td>
     </tr>`;
   });
 }
 
-// ================= SAVE =================
+/////////////////////////////
+// SAVE
+/////////////////////////////
 async function saveAllToday(){
 
   const batch=db.batch();
@@ -218,7 +257,9 @@ async function saveAllToday(){
   await recomputeMonthly();
 }
 
-// ================= MONTHLY =================
+/////////////////////////////
+// MONTHLY RECOMPUTE (AUTO FIX)
+/////////////////////////////
 async function recomputeMonthly(){
 
   const snap=await db.collection("reports").get();
@@ -250,7 +291,9 @@ async function recomputeMonthly(){
   await batch.commit();
 }
 
-// ================= DAILY (WITH REPORTER) =================
+/////////////////////////////
+// DAILY REPORT (WITH EDIT BUTTON FIX)
+/////////////////////////////
 function loadDayReport(){
 
   const day=filterDate.value;
@@ -262,10 +305,14 @@ function loadDayReport(){
 
     dayReportTable.innerHTML=`
     <tr>
-      <th>Date</th><th>Store</th><th>Total</th>
-      <th>Signed</th><th>Rejected</th>
-      <th>Cancelled</th><th>Non Apps</th>
+      <th>Date</th>
+      <th>Store</th>
+      <th>Total</th>
+      <th>Signed</th>
+      <th>Rejected</th>
+      <th>Cancelled</th>
       <th>Reported By</th>
+      <th>Action</th>
     </tr>`;
 
     snap.forEach(doc=>{
@@ -279,16 +326,43 @@ function loadDayReport(){
         <td>${d.signed}</td>
         <td>${d.rejected}</td>
         <td>${d.cancelled}</td>
-        <td>${d.nonapps}</td>
-        <td>${d.reportedBy || "unknown"}</td>
+        <td>${d.reportedBy}</td>
+        <td>
+          <button onclick="editEntry('${doc.id}', '${encodeURIComponent(JSON.stringify(d))}')">
+            Edit
+          </button>
+        </td>
       </tr>`;
     });
 
   });
 }
 
-// ================= UPDATE =================
+/////////////////////////////
+// EDIT
+/////////////////////////////
+function editEntry(id,data){
+
+  data = JSON.parse(decodeURIComponent(data));
+
+  editingId=id;
+
+  date.value=data.date;
+  store.value=data.store;
+  total.value=data.total;
+  signed.value=data.signed;
+  rejected.value=data.rejected;
+  cancelled.value=data.cancelled;
+  nonapps.value=data.nonapps;
+}
+
+/////////////////////////////
+// UPDATE (FIXED + REBUILD MONTHLY)
+/////////////////////////////
 async function updateEntry(){
+
+  if(!editingId) return alert("No selected entry");
+
   await db.collection("reports").doc(editingId).update({
     date:date.value,
     store:store.value,
@@ -296,14 +370,20 @@ async function updateEntry(){
     signed:+signed.value,
     rejected:+rejected.value,
     cancelled:+cancelled.value,
-    nonapps:nonapps.value
+    nonapps:nonapps.value,
+    reportedBy: currentUserData?.store
   });
 
   editingId=null;
+
   await recomputeMonthly();
+
+  alert("Updated + Monthly refreshed");
 }
 
-// ================= INIT =================
+/////////////////////////////
+// INIT
+/////////////////////////////
 window.onload=()=>{
   date.value=new Date().toISOString().split("T")[0];
   filterDate.value=date.value;
