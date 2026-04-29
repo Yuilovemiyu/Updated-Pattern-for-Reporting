@@ -1,41 +1,21 @@
-const CACHE_NAME = "hcpg-sa-cache-v1";
+// sw.js
 
-const urlsToCache = [
-  "/",
-  "/index.html",
-  "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
-  "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js",
-  "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js",
-  "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"
-];
+const CACHE_NAME = "hcpg-report-v1";
 
-// Install
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(urlsToCache);
-    })
-  );
+// We DO NOT aggressively cache Firestore apps (important fix)
+self.addEventListener("install", () => {
+  self.skipWaiting();
 });
 
-// Activate
-self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.map(key => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      );
-    })
-  );
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
 });
 
-// Fetch
-self.addEventListener("fetch", event => {
+// Force network-first for everything (fixes stale monthly totals)
+self.addEventListener("fetch", (event) => {
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
     })
   );
 });
