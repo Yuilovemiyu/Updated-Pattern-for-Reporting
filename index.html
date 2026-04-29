@@ -224,6 +224,10 @@ function login(){
 
 function logout(){ auth.signOut(); }
 
+total.addEventListener("input", ()=>{
+  nonapps.disabled = Number(total.value) > 1;
+});
+  
 function resetInputs(){
   store.value = "";
   total.value = "";
