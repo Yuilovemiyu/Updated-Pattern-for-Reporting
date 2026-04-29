@@ -1,23 +1,23 @@
-# 📊 HC/PG SA Monthly Report Web App
+# 📊 HC/PG Admin Report System
 
-A real-time reporting system built with Firebase Firestore for tracking store performance.
-
----
-
-## 🚀 Features
-
-- ✅ Add daily store entries
-- ✏️ Edit existing records
-- 🗑️ Delete entries
-- 📊 Automatic monthly totals
-- ⚡ Real-time updates (no refresh needed)
-- 📱 Installable as a PWA (Progressive Web App)
-- 🔄 Syncs across multiple users/devices
+A secure Firebase-based reporting system with real admin authentication.
 
 ---
 
-## 🧠 How It Works
+## 🔐 Features
 
-### Data Structure
+- Firebase Auth login
+- Secure Admin via custom claims
+- Store-based access control
+- Real-time Firestore updates
+- Monthly auto computation
+- Edit / Delete system
+- PWA support
 
-Each report is saved as:
+---
+
+## 👑 Admin System
+
+Admins are NOT selectable.
+
+They are assigned via Firebase custom claims:
