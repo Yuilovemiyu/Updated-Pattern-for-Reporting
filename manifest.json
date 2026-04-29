@@ -1,6 +1,6 @@
 {
-  "name": "HC PG Admin Report System",
-  "short_name": "ReportSys",
+  "name": "Report System",
+  "short_name": "Reports",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
