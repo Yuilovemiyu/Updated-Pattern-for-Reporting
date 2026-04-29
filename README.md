@@ -1,19 +1,41 @@
-# 📊 Report System
+# 📊 HC/PG SA Monthly Report System
 
-Firebase-based report tracker with:
+A Firebase-powered reporting system for store performance tracking.
 
-## Features
-- Login / Signup
-- Store assignment
-- Admin via Firebase custom claims
-- Real-time database
-- PWA support
+---
 
-## Security
-- No frontend role selection
-- Admin only via Firebase Auth claims
+# 🚀 Features
 
-## Setup
-1. Enable Email/Password Auth
-2. Deploy Firebase Hosting
-3. Add admin via Firebase Admin SDK
+- 🔐 Email Login / Signup (Firebase Auth)
+- 🏪 Store selection per user
+- 📅 Daily reporting system
+- 📊 Monthly auto-calculated totals
+- 👤 Tracks who reported each entry
+- ⚡ Real-time updates (Firestore onSnapshot)
+- 💾 Edit & update reports
+- 📱 PWA installable (mobile/desktop)
+- 📴 Offline support (service worker)
+
+---
+
+# 🔧 Setup Instructions
+
+## 1. Firebase Setup
+
+Enable in Firebase Console:
+
+- Authentication → Email/Password
+- Firestore Database → Start in production mode
+
+---
+
+## 2. Add Firebase Config
+
+Already included in code:
+
+```js
+firebase.initializeApp({
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT"
+});
