@@ -76,7 +76,7 @@
 <button onclick="saveAsPNG()">🖼 Save PNG</button>
 <button onclick="updateEntry()">✏️ Update</button>
 
-<!-- ✅ PREVIEW SECTION -->
+<!-- PREVIEW -->
 <h3>Preview Entries</h3>
 <table id="previewTable"></table>
 
@@ -152,23 +152,32 @@ window.onload = ()=>{
 // NON APPS LOGIC
 total.oninput = ()=> nonapps.disabled = total.value > 1;
 
-// ADD ENTRY
+// ✅ UPDATED ADD ENTRY
 function addEntry(){
   todayEntries.push({
     date: date.value,
     store: store.value,
-    total:+total.value||0,
-    signed:+signed.value||0,
-    rejected:+rejected.value||0,
-    cancelled:+cancelled.value||0,
-    nonapps: nonapps.value||"-",
-    reportedBy:selectedStore
+    total: +total.value || 0,
+    signed: +signed.value || 0,
+    rejected: +rejected.value || 0,
+    cancelled: +cancelled.value || 0,
+    nonapps: nonapps.value || "-",
+    reportedBy: selectedStore
   });
 
   renderPreview();
+
+  // CLEAR FIELDS (except date)
+  store.selectedIndex = 0;
+  total.value = "";
+  signed.value = "";
+  rejected.value = "";
+  cancelled.value = "";
+  nonapps.value = "";
+  nonapps.disabled = true;
 }
 
-// ✅ PREVIEW RENDER
+// PREVIEW RENDER
 function renderPreview(){
 
   previewTable.innerHTML = `
