@@ -1,47 +1,24 @@
-# 📊 HC/PG SA Monthly Report System
+# 📊 Daily Report Encoder (Firebase + PNG Export)
 
-A Firebase-based reporting system for daily store entries and automatic monthly totals.
+A simple daily reporting system built with HTML, JavaScript, and Firebase Firestore.
 
 ---
 
 ## 🚀 Features
 
-### 📌 Daily Reporting
-- Add store entries per day
-- Includes:
-  - Total Apps
-  - Signed
-  - Rejected
-  - Cancelled
-  - Non Apps
-- Tracks who reported using `reportedBy`
+- Store-based login (no password system)
+- Daily entry encoder
+- Preview before saving
+- Save data to Firebase
+- Auto monthly totals computation
+- Export daily report as PNG
+- Works offline (PWA support)
 
 ---
 
-### 📊 Monthly Totals (AUTO)
-- Automatically recalculates from all reports
-- Groups by:
-  - Month
-  - Store
-- Updates after:
-  - Add Entry
-  - Update Entry
-  - Save All
+## 📦 Setup
 
----
-
-### ✏️ Edit System
-- Edit any daily report entry
-- Changes automatically reflect in monthly totals
-
----
-
-### 🛠 Admin System (OPTION 2)
-- Admin users can promote other users to admin
-- Only visible if `admin: true`
-
----
-
-## 🔐 Firebase Structure
-
-### users collection
+### 1. Firebase Setup
+Create a Firebase project:
+- Enable Firestore Database
+- Set rules (for testing):
