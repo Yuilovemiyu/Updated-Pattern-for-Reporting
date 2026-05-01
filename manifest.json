@@ -1,11 +1,11 @@
 {
-  "name": "HC/PG SA Monthly Report",
-  "short_name": "Monthly Report",
+  "name": "Daily Report",
+  "short_name": "DailyReport",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
-  "description": "Daily reporting and monthly totals system for stores",
+  "description": "Daily report encoder with Firebase and PNG export",
   "icons": [
     {
       "src": "icon-192.png",
