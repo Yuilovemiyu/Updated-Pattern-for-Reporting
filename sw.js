@@ -1,21 +1,36 @@
-// sw.js
+const CACHE_NAME = "daily-report-cache-v1";
 
-const CACHE_NAME = "hcpg-report-v1";
+const urlsToCache = [
+  "./",
+  "./index.html"
+];
 
-// We DO NOT aggressively cache Firestore apps (important fix)
-self.addEventListener("install", () => {
-  self.skipWaiting();
+// INSTALL
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(urlsToCache))
+  );
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-// Force network-first for everything (fixes stale monthly totals)
-self.addEventListener("fetch", (event) => {
+// FETCH
+self.addEventListener("fetch", event => {
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
+    caches.match(event.request)
+      .then(response => {
+        return response || fetch(event.request);
+      })
+  );
+});
+
+// ACTIVATE
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(key => key !== CACHE_NAME)
+            .map(key => caches.delete(key))
+      )
+    )
   );
 });
