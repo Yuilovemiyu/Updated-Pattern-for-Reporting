@@ -45,14 +45,12 @@
 
 <body>
 
-<!-- STORE SELECT -->
 <div id="startScreen">
   <h2>Select Your Store</h2>
   <select id="startStore"></select>
   <button onclick="startApp()">Enter</button>
 </div>
 
-<!-- MAIN APP -->
 <div id="app">
 
 <h2>📊 Daily Report</h2>
@@ -76,7 +74,6 @@
 <button onclick="saveAsPNG()">🖼 Save PNG</button>
 <button onclick="updateEntry()">✏️ Update</button>
 
-<!-- PREVIEW -->
 <h3>Preview Entries</h3>
 <table id="previewTable"></table>
 
@@ -89,7 +86,6 @@
 
 </div>
 
-<!-- HIDDEN PNG AREA -->
 <div id="pngCapture" style="display:none; background:white; padding:10px;"></div>
 
 <script>
@@ -119,12 +115,11 @@ stores.forEach(s=>{
   startStore.innerHTML += `<option value="${s}">${s}</option>`;
 });
 
-// VARIABLES
 let todayEntries = [];
 let editingId = null;
 let selectedStore = null;
 
-// START APP
+// START
 function startApp(){
   selectedStore = startStore.value;
   if(!selectedStore) return alert("Select store");
@@ -137,7 +132,7 @@ function startApp(){
   currentStore.innerHTML = `<b>Store:</b> ${selectedStore}`;
 }
 
-// AUTO LOAD STORE
+// AUTO LOAD
 window.onload = ()=>{
   const saved = localStorage.getItem("selectedStore");
   if(saved){
@@ -152,7 +147,7 @@ window.onload = ()=>{
 // NON APPS LOGIC
 total.oninput = ()=> nonapps.disabled = total.value > 1;
 
-// ✅ UPDATED ADD ENTRY
+// ADD ENTRY
 function addEntry(){
   todayEntries.push({
     date: date.value,
@@ -167,7 +162,6 @@ function addEntry(){
 
   renderPreview();
 
-  // CLEAR FIELDS (except date)
   store.selectedIndex = 0;
   total.value = "";
   signed.value = "";
@@ -177,7 +171,13 @@ function addEntry(){
   nonapps.disabled = true;
 }
 
-// PREVIEW RENDER
+// DELETE ENTRY ⭐ NEW
+function deleteEntry(index){
+  todayEntries.splice(index, 1);
+  renderPreview();
+}
+
+// PREVIEW
 function renderPreview(){
 
   previewTable.innerHTML = `
@@ -189,15 +189,16 @@ function renderPreview(){
       <th>Rejected</th>
       <th>Cancelled</th>
       <th>Non Apps</th>
+      <th>Action</th>
     </tr>
   `;
 
   if(todayEntries.length === 0){
-    previewTable.innerHTML += `<tr><td colspan="7">No entries yet</td></tr>`;
+    previewTable.innerHTML += `<tr><td colspan="8">No entries yet</td></tr>`;
     return;
   }
 
-  todayEntries.forEach(e=>{
+  todayEntries.forEach((e, i)=>{
     previewTable.innerHTML += `
       <tr>
         <td>${e.date}</td>
@@ -207,12 +208,12 @@ function renderPreview(){
         <td>${e.rejected}</td>
         <td>${e.cancelled}</td>
         <td>${e.nonapps}</td>
+        <td><button onclick="deleteEntry(${i})">🗑 Delete</button></td>
       </tr>
     `;
   });
 }
 
-// SAVE + PNG
 async function saveAsPNG(){
 
   if(todayEntries.length === 0){
@@ -271,9 +272,7 @@ async function saveAsPNG(){
   link.click();
 
   box.style.display = "none";
-  box.innerHTML = "";
   todayEntries = [];
-
   renderPreview();
 
   alert("✅ Saved to Firebase + PNG downloaded!");
@@ -281,7 +280,6 @@ async function saveAsPNG(){
 
 // RECOMPUTE MONTHLY
 async function recomputeMonthly(){
-
   const snap = await db.collection("reports").get();
   const map = {};
 
@@ -310,7 +308,6 @@ async function recomputeMonthly(){
   await batch.commit();
 }
 
-// DAILY VIEW
 function loadDayReport(){
 
   const day = filterDate.value;
@@ -347,7 +344,6 @@ function loadDayReport(){
     });
 }
 
-// EDIT
 function editEntry(id,data){
   date.value = data.date;
   store.value = data.store;
@@ -359,7 +355,6 @@ function editEntry(id,data){
   editingId = id;
 }
 
-// UPDATE
 async function updateEntry(){
   await db.collection("reports").doc(editingId).update({
     date: date.value,
